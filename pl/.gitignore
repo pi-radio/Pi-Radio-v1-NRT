@@ -1,2 +1,5 @@
 project
 .Xil/
+*.jou
+*.log
+*.str

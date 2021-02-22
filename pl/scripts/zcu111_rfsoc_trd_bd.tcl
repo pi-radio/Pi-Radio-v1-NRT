@@ -111,7 +111,10 @@ if { ${design_name} eq "" } {
 }
 
   # Add USER_COMMENTS on $design_name
-  set_property USER_COMMENTS.comment_0 "ZCU111 RFSoC TRD" [get_bd_designs $design_name]
+  set_property USER_COMMENTS.comment_0 "Pi-Radio v1 SDR
+4-channel Fully Digital
+Baseband I/Q Interfaces
+60 GHz" [get_bd_designs $design_name]
 
 common::send_gid_msg -ssname BD::TCL -id 2005 -severity "INFO" "Currently the variable <design_name> is equal to \"$design_name\"."
 
@@ -129,6 +132,7 @@ if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
 xilinx.com:ip:smartconnect:1.0\
 xilinx.com:ip:ddr4:2.2\
+user.org:user:spi_ip:1\
 user.org:user:user_register:1.0\
 xilinx.com:ip:usp_rf_data_converter:2.4\
 xilinx.com:ip:xlconcat:2.1\
@@ -1642,22 +1646,6 @@ proc create_hier_cell_adc_0001 { parentCell nameHier } {
 
   create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s07_axis
 
-  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s08_axis
-
-  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s09_axis
-
-  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s10_axis
-
-  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s11_axis
-
-  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s12_axis
-
-  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s13_axis
-
-  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s14_axis
-
-  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s15_axis
-
 
   # Create pins
   create_bd_pin -dir I -from 94 -to 0 Din
@@ -1677,7 +1665,7 @@ proc create_hier_cell_adc_0001 { parentCell nameHier } {
   # Create instance: axis_combiner_0, and set properties
   set axis_combiner_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_combiner:1.1 axis_combiner_0 ]
   set_property -dict [ list \
-   CONFIG.NUM_SI {16} \
+   CONFIG.NUM_SI {8} \
  ] $axis_combiner_0
 
   # Create instance: axis_data_fifo_0, and set properties
@@ -1725,14 +1713,6 @@ proc create_hier_cell_adc_0001 { parentCell nameHier } {
   connect_bd_intf_net -intf_net s05_axis_1 [get_bd_intf_pins s05_axis] [get_bd_intf_pins axis_combiner_0/S05_AXIS]
   connect_bd_intf_net -intf_net s06_axis_1 [get_bd_intf_pins s06_axis] [get_bd_intf_pins axis_combiner_0/S06_AXIS]
   connect_bd_intf_net -intf_net s07_axis_1 [get_bd_intf_pins s07_axis] [get_bd_intf_pins axis_combiner_0/S07_AXIS]
-  connect_bd_intf_net -intf_net s08_axis_1 [get_bd_intf_pins s08_axis] [get_bd_intf_pins axis_combiner_0/S08_AXIS]
-  connect_bd_intf_net -intf_net s09_axis_1 [get_bd_intf_pins s09_axis] [get_bd_intf_pins axis_combiner_0/S09_AXIS]
-  connect_bd_intf_net -intf_net s10_axis_1 [get_bd_intf_pins s10_axis] [get_bd_intf_pins axis_combiner_0/S10_AXIS]
-  connect_bd_intf_net -intf_net s11_axis_1 [get_bd_intf_pins s11_axis] [get_bd_intf_pins axis_combiner_0/S11_AXIS]
-  connect_bd_intf_net -intf_net s12_axis_1 [get_bd_intf_pins s12_axis] [get_bd_intf_pins axis_combiner_0/S12_AXIS]
-  connect_bd_intf_net -intf_net s13_axis_1 [get_bd_intf_pins s13_axis] [get_bd_intf_pins axis_combiner_0/S13_AXIS]
-  connect_bd_intf_net -intf_net s14_axis_1 [get_bd_intf_pins s14_axis] [get_bd_intf_pins axis_combiner_0/S14_AXIS]
-  connect_bd_intf_net -intf_net s15_axis_1 [get_bd_intf_pins s15_axis] [get_bd_intf_pins axis_combiner_0/S15_AXIS]
 
   # Create port connections
   connect_bd_net -net Din_0_1 [get_bd_pins Din] [get_bd_pins soft_reset/Din_0]
@@ -1855,6 +1835,19 @@ proc create_root_design { parentCell } {
 
 
   # Create ports
+  set spi_axi_error [ create_bd_port -dir O spi_axi_error ]
+  set spi_clk [ create_bd_port -dir O -type clk spi_clk ]
+  set spi_lmx_senb [ create_bd_port -dir O spi_lmx_senb ]
+  set spi_miso [ create_bd_port -dir I spi_miso ]
+  set spi_mosi [ create_bd_port -dir O spi_mosi ]
+  set spi_rx0_senb [ create_bd_port -dir O spi_rx0_senb ]
+  set spi_rx1_senb [ create_bd_port -dir O spi_rx1_senb ]
+  set spi_rx2_senb [ create_bd_port -dir O spi_rx2_senb ]
+  set spi_rx3_senb [ create_bd_port -dir O spi_rx3_senb ]
+  set spi_tx0_senb [ create_bd_port -dir O spi_tx0_senb ]
+  set spi_tx1_senb [ create_bd_port -dir O spi_tx1_senb ]
+  set spi_tx2_senb [ create_bd_port -dir O spi_tx2_senb ]
+  set spi_tx3_senb [ create_bd_port -dir O spi_tx3_senb ]
   set sys_rst_0 [ create_bd_port -dir I -type rst sys_rst_0 ]
   set_property -dict [ list \
    CONFIG.POLARITY {ACTIVE_HIGH} \
@@ -1911,11 +1904,14 @@ proc create_root_design { parentCell } {
   # Create instance: ps8_0_axi_periph, and set properties
   set ps8_0_axi_periph [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 ps8_0_axi_periph ]
   set_property -dict [ list \
-   CONFIG.NUM_MI {6} \
+   CONFIG.NUM_MI {7} \
  ] $ps8_0_axi_periph
 
   # Create instance: reset_block
   create_hier_cell_reset_block [current_bd_instance .] reset_block
+
+  # Create instance: spi_ip_0, and set properties
+  set spi_ip_0 [ create_bd_cell -type ip -vlnv user.org:user:spi_ip:1 spi_ip_0 ]
 
   # Create instance: user_register_0, and set properties
   set user_register_0 [ create_bd_cell -type ip -vlnv user.org:user:user_register:1.0 user_register_0 ]
@@ -1954,86 +1950,86 @@ proc create_root_design { parentCell } {
    CONFIG.ADC3_PLL_Enable {true} \
    CONFIG.ADC3_Refclk_Freq {491.520} \
    CONFIG.ADC3_Sampling_Rate {3.93216} \
-   CONFIG.ADC_Data_Type00 {1} \
-   CONFIG.ADC_Data_Type01 {1} \
-   CONFIG.ADC_Data_Type02 {1} \
-   CONFIG.ADC_Data_Type03 {1} \
-   CONFIG.ADC_Data_Type10 {1} \
-   CONFIG.ADC_Data_Type11 {1} \
-   CONFIG.ADC_Data_Type12 {1} \
-   CONFIG.ADC_Data_Type13 {1} \
-   CONFIG.ADC_Data_Type20 {1} \
-   CONFIG.ADC_Data_Type21 {1} \
-   CONFIG.ADC_Data_Type22 {1} \
-   CONFIG.ADC_Data_Type23 {1} \
-   CONFIG.ADC_Data_Type30 {1} \
-   CONFIG.ADC_Data_Type31 {1} \
-   CONFIG.ADC_Data_Type32 {1} \
-   CONFIG.ADC_Data_Type33 {1} \
-   CONFIG.ADC_Data_Width00 {2} \
-   CONFIG.ADC_Data_Width01 {2} \
-   CONFIG.ADC_Data_Width02 {2} \
-   CONFIG.ADC_Data_Width03 {2} \
-   CONFIG.ADC_Data_Width10 {2} \
-   CONFIG.ADC_Data_Width11 {2} \
-   CONFIG.ADC_Data_Width12 {2} \
-   CONFIG.ADC_Data_Width13 {2} \
-   CONFIG.ADC_Data_Width20 {2} \
-   CONFIG.ADC_Data_Width21 {2} \
-   CONFIG.ADC_Data_Width22 {2} \
-   CONFIG.ADC_Data_Width23 {2} \
-   CONFIG.ADC_Data_Width30 {2} \
-   CONFIG.ADC_Data_Width31 {2} \
-   CONFIG.ADC_Data_Width32 {2} \
-   CONFIG.ADC_Data_Width33 {2} \
-   CONFIG.ADC_Decimation_Mode00 {4} \
-   CONFIG.ADC_Decimation_Mode01 {4} \
-   CONFIG.ADC_Decimation_Mode02 {4} \
-   CONFIG.ADC_Decimation_Mode03 {4} \
-   CONFIG.ADC_Decimation_Mode10 {4} \
-   CONFIG.ADC_Decimation_Mode11 {4} \
-   CONFIG.ADC_Decimation_Mode12 {4} \
-   CONFIG.ADC_Decimation_Mode13 {4} \
-   CONFIG.ADC_Decimation_Mode20 {4} \
-   CONFIG.ADC_Decimation_Mode21 {4} \
-   CONFIG.ADC_Decimation_Mode22 {4} \
-   CONFIG.ADC_Decimation_Mode23 {4} \
-   CONFIG.ADC_Decimation_Mode30 {4} \
-   CONFIG.ADC_Decimation_Mode31 {4} \
-   CONFIG.ADC_Decimation_Mode32 {4} \
-   CONFIG.ADC_Decimation_Mode33 {4} \
-   CONFIG.ADC_Mixer_Mode00 {0} \
-   CONFIG.ADC_Mixer_Mode01 {0} \
-   CONFIG.ADC_Mixer_Mode02 {0} \
-   CONFIG.ADC_Mixer_Mode03 {0} \
-   CONFIG.ADC_Mixer_Mode10 {0} \
-   CONFIG.ADC_Mixer_Mode11 {0} \
-   CONFIG.ADC_Mixer_Mode12 {0} \
-   CONFIG.ADC_Mixer_Mode13 {0} \
-   CONFIG.ADC_Mixer_Mode20 {0} \
-   CONFIG.ADC_Mixer_Mode21 {0} \
-   CONFIG.ADC_Mixer_Mode22 {0} \
-   CONFIG.ADC_Mixer_Mode23 {0} \
-   CONFIG.ADC_Mixer_Mode30 {0} \
-   CONFIG.ADC_Mixer_Mode31 {0} \
-   CONFIG.ADC_Mixer_Mode32 {0} \
-   CONFIG.ADC_Mixer_Mode33 {0} \
-   CONFIG.ADC_Mixer_Type00 {2} \
-   CONFIG.ADC_Mixer_Type01 {2} \
-   CONFIG.ADC_Mixer_Type02 {2} \
-   CONFIG.ADC_Mixer_Type03 {2} \
-   CONFIG.ADC_Mixer_Type10 {2} \
-   CONFIG.ADC_Mixer_Type11 {2} \
-   CONFIG.ADC_Mixer_Type12 {2} \
-   CONFIG.ADC_Mixer_Type13 {2} \
-   CONFIG.ADC_Mixer_Type20 {2} \
-   CONFIG.ADC_Mixer_Type21 {2} \
-   CONFIG.ADC_Mixer_Type22 {2} \
-   CONFIG.ADC_Mixer_Type23 {2} \
-   CONFIG.ADC_Mixer_Type30 {2} \
-   CONFIG.ADC_Mixer_Type31 {2} \
-   CONFIG.ADC_Mixer_Type32 {2} \
-   CONFIG.ADC_Mixer_Type33 {2} \
+   CONFIG.ADC_Data_Type00 {0} \
+   CONFIG.ADC_Data_Type01 {0} \
+   CONFIG.ADC_Data_Type02 {0} \
+   CONFIG.ADC_Data_Type03 {0} \
+   CONFIG.ADC_Data_Type10 {0} \
+   CONFIG.ADC_Data_Type11 {0} \
+   CONFIG.ADC_Data_Type12 {0} \
+   CONFIG.ADC_Data_Type13 {0} \
+   CONFIG.ADC_Data_Type20 {0} \
+   CONFIG.ADC_Data_Type21 {0} \
+   CONFIG.ADC_Data_Type22 {0} \
+   CONFIG.ADC_Data_Type23 {0} \
+   CONFIG.ADC_Data_Type30 {0} \
+   CONFIG.ADC_Data_Type31 {0} \
+   CONFIG.ADC_Data_Type32 {0} \
+   CONFIG.ADC_Data_Type33 {0} \
+   CONFIG.ADC_Data_Width00 {4} \
+   CONFIG.ADC_Data_Width01 {4} \
+   CONFIG.ADC_Data_Width02 {4} \
+   CONFIG.ADC_Data_Width03 {4} \
+   CONFIG.ADC_Data_Width10 {4} \
+   CONFIG.ADC_Data_Width11 {4} \
+   CONFIG.ADC_Data_Width12 {4} \
+   CONFIG.ADC_Data_Width13 {4} \
+   CONFIG.ADC_Data_Width20 {4} \
+   CONFIG.ADC_Data_Width21 {4} \
+   CONFIG.ADC_Data_Width22 {4} \
+   CONFIG.ADC_Data_Width23 {4} \
+   CONFIG.ADC_Data_Width30 {4} \
+   CONFIG.ADC_Data_Width31 {4} \
+   CONFIG.ADC_Data_Width32 {4} \
+   CONFIG.ADC_Data_Width33 {4} \
+   CONFIG.ADC_Decimation_Mode00 {2} \
+   CONFIG.ADC_Decimation_Mode01 {2} \
+   CONFIG.ADC_Decimation_Mode02 {2} \
+   CONFIG.ADC_Decimation_Mode03 {2} \
+   CONFIG.ADC_Decimation_Mode10 {2} \
+   CONFIG.ADC_Decimation_Mode11 {2} \
+   CONFIG.ADC_Decimation_Mode12 {2} \
+   CONFIG.ADC_Decimation_Mode13 {2} \
+   CONFIG.ADC_Decimation_Mode20 {2} \
+   CONFIG.ADC_Decimation_Mode21 {2} \
+   CONFIG.ADC_Decimation_Mode22 {2} \
+   CONFIG.ADC_Decimation_Mode23 {2} \
+   CONFIG.ADC_Decimation_Mode30 {2} \
+   CONFIG.ADC_Decimation_Mode31 {2} \
+   CONFIG.ADC_Decimation_Mode32 {2} \
+   CONFIG.ADC_Decimation_Mode33 {2} \
+   CONFIG.ADC_Mixer_Mode00 {2} \
+   CONFIG.ADC_Mixer_Mode01 {2} \
+   CONFIG.ADC_Mixer_Mode02 {2} \
+   CONFIG.ADC_Mixer_Mode03 {2} \
+   CONFIG.ADC_Mixer_Mode10 {2} \
+   CONFIG.ADC_Mixer_Mode11 {2} \
+   CONFIG.ADC_Mixer_Mode12 {2} \
+   CONFIG.ADC_Mixer_Mode13 {2} \
+   CONFIG.ADC_Mixer_Mode20 {2} \
+   CONFIG.ADC_Mixer_Mode21 {2} \
+   CONFIG.ADC_Mixer_Mode22 {2} \
+   CONFIG.ADC_Mixer_Mode23 {2} \
+   CONFIG.ADC_Mixer_Mode30 {2} \
+   CONFIG.ADC_Mixer_Mode31 {2} \
+   CONFIG.ADC_Mixer_Mode32 {2} \
+   CONFIG.ADC_Mixer_Mode33 {2} \
+   CONFIG.ADC_Mixer_Type00 {0} \
+   CONFIG.ADC_Mixer_Type01 {0} \
+   CONFIG.ADC_Mixer_Type02 {0} \
+   CONFIG.ADC_Mixer_Type03 {0} \
+   CONFIG.ADC_Mixer_Type10 {0} \
+   CONFIG.ADC_Mixer_Type11 {0} \
+   CONFIG.ADC_Mixer_Type12 {0} \
+   CONFIG.ADC_Mixer_Type13 {0} \
+   CONFIG.ADC_Mixer_Type20 {0} \
+   CONFIG.ADC_Mixer_Type21 {0} \
+   CONFIG.ADC_Mixer_Type22 {0} \
+   CONFIG.ADC_Mixer_Type23 {0} \
+   CONFIG.ADC_Mixer_Type30 {0} \
+   CONFIG.ADC_Mixer_Type31 {0} \
+   CONFIG.ADC_Mixer_Type32 {0} \
+   CONFIG.ADC_Mixer_Type33 {0} \
    CONFIG.ADC_NCO_Freq00 {1} \
    CONFIG.ADC_NCO_Freq02 {1} \
    CONFIG.ADC_NCO_Freq03 {1} \
@@ -2105,30 +2101,30 @@ proc create_root_design { parentCell } {
    CONFIG.DAC_Data_Width11 {4} \
    CONFIG.DAC_Data_Width12 {4} \
    CONFIG.DAC_Data_Width13 {4} \
-   CONFIG.DAC_Interpolation_Mode00 {4} \
-   CONFIG.DAC_Interpolation_Mode01 {4} \
-   CONFIG.DAC_Interpolation_Mode02 {4} \
-   CONFIG.DAC_Interpolation_Mode03 {4} \
-   CONFIG.DAC_Interpolation_Mode10 {4} \
-   CONFIG.DAC_Interpolation_Mode11 {4} \
-   CONFIG.DAC_Interpolation_Mode12 {4} \
-   CONFIG.DAC_Interpolation_Mode13 {4} \
-   CONFIG.DAC_Mixer_Mode00 {0} \
-   CONFIG.DAC_Mixer_Mode01 {0} \
-   CONFIG.DAC_Mixer_Mode02 {0} \
-   CONFIG.DAC_Mixer_Mode03 {0} \
-   CONFIG.DAC_Mixer_Mode10 {0} \
-   CONFIG.DAC_Mixer_Mode11 {0} \
-   CONFIG.DAC_Mixer_Mode12 {0} \
-   CONFIG.DAC_Mixer_Mode13 {0} \
-   CONFIG.DAC_Mixer_Type00 {2} \
-   CONFIG.DAC_Mixer_Type01 {2} \
-   CONFIG.DAC_Mixer_Type02 {2} \
-   CONFIG.DAC_Mixer_Type03 {2} \
-   CONFIG.DAC_Mixer_Type10 {2} \
-   CONFIG.DAC_Mixer_Type11 {2} \
-   CONFIG.DAC_Mixer_Type12 {2} \
-   CONFIG.DAC_Mixer_Type13 {2} \
+   CONFIG.DAC_Interpolation_Mode00 {2} \
+   CONFIG.DAC_Interpolation_Mode01 {2} \
+   CONFIG.DAC_Interpolation_Mode02 {2} \
+   CONFIG.DAC_Interpolation_Mode03 {2} \
+   CONFIG.DAC_Interpolation_Mode10 {2} \
+   CONFIG.DAC_Interpolation_Mode11 {2} \
+   CONFIG.DAC_Interpolation_Mode12 {2} \
+   CONFIG.DAC_Interpolation_Mode13 {2} \
+   CONFIG.DAC_Mixer_Mode00 {2} \
+   CONFIG.DAC_Mixer_Mode01 {2} \
+   CONFIG.DAC_Mixer_Mode02 {2} \
+   CONFIG.DAC_Mixer_Mode03 {2} \
+   CONFIG.DAC_Mixer_Mode10 {2} \
+   CONFIG.DAC_Mixer_Mode11 {2} \
+   CONFIG.DAC_Mixer_Mode12 {2} \
+   CONFIG.DAC_Mixer_Mode13 {2} \
+   CONFIG.DAC_Mixer_Type00 {0} \
+   CONFIG.DAC_Mixer_Type01 {0} \
+   CONFIG.DAC_Mixer_Type02 {0} \
+   CONFIG.DAC_Mixer_Type03 {0} \
+   CONFIG.DAC_Mixer_Type10 {0} \
+   CONFIG.DAC_Mixer_Type11 {0} \
+   CONFIG.DAC_Mixer_Type12 {0} \
+   CONFIG.DAC_Mixer_Type13 {0} \
    CONFIG.DAC_NCO_Freq00 {1} \
    CONFIG.DAC_NCO_Freq01 {1} \
    CONFIG.DAC_NCO_Freq02 {1} \
@@ -3714,24 +3710,17 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net ps8_0_axi_periph_M02_AXI [get_bd_intf_pins ps8_0_axi_periph/M02_AXI] [get_bd_intf_pins usp_rf_data_converter_0/s_axi]
   connect_bd_intf_net -intf_net ps8_0_axi_periph_M03_AXI [get_bd_intf_pins adc_0001/s00_axi_0] [get_bd_intf_pins ps8_0_axi_periph/M03_AXI]
   connect_bd_intf_net -intf_net ps8_0_axi_periph_M05_AXI [get_bd_intf_pins adc_0001/s00_axi] [get_bd_intf_pins ps8_0_axi_periph/M05_AXI]
+  connect_bd_intf_net -intf_net ps8_0_axi_periph_M06_AXI [get_bd_intf_pins ps8_0_axi_periph/M06_AXI] [get_bd_intf_pins spi_ip_0/S_AXI]
   connect_bd_intf_net -intf_net sysref_in_1 [get_bd_intf_ports sysref_in] [get_bd_intf_pins usp_rf_data_converter_0/sysref_in]
   connect_bd_intf_net -intf_net user_si570_sysclk_1 [get_bd_intf_ports user_si570_sysclk] [get_bd_intf_pins ddr4_0/C0_SYS_CLK]
   connect_bd_intf_net -intf_net usp_rf_data_converter_0_m00_axis [get_bd_intf_pins adc_0001/s00_axis] [get_bd_intf_pins usp_rf_data_converter_0/m00_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m01_axis [get_bd_intf_pins adc_0001/s01_axis] [get_bd_intf_pins usp_rf_data_converter_0/m01_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m02_axis [get_bd_intf_pins adc_0001/s02_axis] [get_bd_intf_pins usp_rf_data_converter_0/m02_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m03_axis [get_bd_intf_pins adc_0001/s03_axis] [get_bd_intf_pins usp_rf_data_converter_0/m03_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m10_axis [get_bd_intf_pins adc_0001/s04_axis] [get_bd_intf_pins usp_rf_data_converter_0/m10_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m11_axis [get_bd_intf_pins adc_0001/s05_axis] [get_bd_intf_pins usp_rf_data_converter_0/m11_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m12_axis [get_bd_intf_pins adc_0001/s06_axis] [get_bd_intf_pins usp_rf_data_converter_0/m12_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m13_axis [get_bd_intf_pins adc_0001/s07_axis] [get_bd_intf_pins usp_rf_data_converter_0/m13_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m20_axis [get_bd_intf_pins adc_0001/s08_axis] [get_bd_intf_pins usp_rf_data_converter_0/m20_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m21_axis [get_bd_intf_pins adc_0001/s09_axis] [get_bd_intf_pins usp_rf_data_converter_0/m21_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m22_axis [get_bd_intf_pins adc_0001/s10_axis] [get_bd_intf_pins usp_rf_data_converter_0/m22_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m23_axis [get_bd_intf_pins adc_0001/s11_axis] [get_bd_intf_pins usp_rf_data_converter_0/m23_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m30_axis [get_bd_intf_pins adc_0001/s12_axis] [get_bd_intf_pins usp_rf_data_converter_0/m30_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m31_axis [get_bd_intf_pins adc_0001/s13_axis] [get_bd_intf_pins usp_rf_data_converter_0/m31_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m32_axis [get_bd_intf_pins adc_0001/s14_axis] [get_bd_intf_pins usp_rf_data_converter_0/m32_axis]
-  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m33_axis [get_bd_intf_pins adc_0001/s15_axis] [get_bd_intf_pins usp_rf_data_converter_0/m33_axis]
+  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m02_axis [get_bd_intf_pins adc_0001/s01_axis] [get_bd_intf_pins usp_rf_data_converter_0/m02_axis]
+  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m10_axis [get_bd_intf_pins adc_0001/s02_axis] [get_bd_intf_pins usp_rf_data_converter_0/m10_axis]
+  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m12_axis [get_bd_intf_pins adc_0001/s03_axis] [get_bd_intf_pins usp_rf_data_converter_0/m12_axis]
+  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m20_axis [get_bd_intf_pins adc_0001/s04_axis] [get_bd_intf_pins usp_rf_data_converter_0/m20_axis]
+  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m22_axis [get_bd_intf_pins adc_0001/s05_axis] [get_bd_intf_pins usp_rf_data_converter_0/m22_axis]
+  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m30_axis [get_bd_intf_pins adc_0001/s06_axis] [get_bd_intf_pins usp_rf_data_converter_0/m30_axis]
+  connect_bd_intf_net -intf_net usp_rf_data_converter_0_m32_axis [get_bd_intf_pins adc_0001/s07_axis] [get_bd_intf_pins usp_rf_data_converter_0/m32_axis]
   connect_bd_intf_net -intf_net usp_rf_data_converter_0_vout00 [get_bd_intf_ports vout00] [get_bd_intf_pins usp_rf_data_converter_0/vout00]
   connect_bd_intf_net -intf_net usp_rf_data_converter_0_vout01 [get_bd_intf_ports vout01] [get_bd_intf_pins usp_rf_data_converter_0/vout01]
   connect_bd_intf_net -intf_net usp_rf_data_converter_0_vout02 [get_bd_intf_ports vout02] [get_bd_intf_pins usp_rf_data_converter_0/vout02]
@@ -3783,7 +3772,20 @@ proc create_root_design { parentCell } {
   connect_bd_net -net proc_sys_reset_2_peripheral_aresetn [get_bd_pins adc_0001/s_axis_aresetn] [get_bd_pins reset_block/peripheral_aresetn4] [get_bd_pins usp_rf_data_converter_0/m0_axis_aresetn] [get_bd_pins usp_rf_data_converter_0/m1_axis_aresetn] [get_bd_pins usp_rf_data_converter_0/m2_axis_aresetn] [get_bd_pins usp_rf_data_converter_0/m3_axis_aresetn]
   connect_bd_net -net rst_ddr4_0_300M_peripheral_aresetn [get_bd_pins adc_0001/m_axis_aresetn] [get_bd_pins adc_dma_block/M00_ARESETN] [get_bd_pins axi_smc/aresetn] [get_bd_pins dac_dma_block/M00_ARESETN] [get_bd_pins ddr4_0/c0_ddr4_aresetn] [get_bd_pins reset_block/peripheral_aresetn]
   connect_bd_net -net rst_ps8_0_99M_interconnect_aresetn [get_bd_pins ps8_0_axi_periph/ARESETN] [get_bd_pins reset_block/interconnect_aresetn]
-  connect_bd_net -net rst_ps8_0_99M_peripheral_aresetn [get_bd_pins adc_0001/axi_resetn] [get_bd_pins adc_dma_block/axi_resetn] [get_bd_pins dac_dma_block/axi_resetn] [get_bd_pins dac_tile0_block0/axi_resetn] [get_bd_pins ps8_0_axi_periph/M00_ARESETN] [get_bd_pins ps8_0_axi_periph/M01_ARESETN] [get_bd_pins ps8_0_axi_periph/M02_ARESETN] [get_bd_pins ps8_0_axi_periph/M03_ARESETN] [get_bd_pins ps8_0_axi_periph/M04_ARESETN] [get_bd_pins ps8_0_axi_periph/M05_ARESETN] [get_bd_pins ps8_0_axi_periph/S00_ARESETN] [get_bd_pins reset_block/peripheral_aresetn3] [get_bd_pins user_register_0/s00_axi_aresetn] [get_bd_pins usp_rf_data_converter_0/s_axi_aresetn]
+  connect_bd_net -net rst_ps8_0_99M_peripheral_aresetn [get_bd_pins adc_0001/axi_resetn] [get_bd_pins adc_dma_block/axi_resetn] [get_bd_pins dac_dma_block/axi_resetn] [get_bd_pins dac_tile0_block0/axi_resetn] [get_bd_pins ps8_0_axi_periph/M00_ARESETN] [get_bd_pins ps8_0_axi_periph/M01_ARESETN] [get_bd_pins ps8_0_axi_periph/M02_ARESETN] [get_bd_pins ps8_0_axi_periph/M03_ARESETN] [get_bd_pins ps8_0_axi_periph/M04_ARESETN] [get_bd_pins ps8_0_axi_periph/M05_ARESETN] [get_bd_pins ps8_0_axi_periph/M06_ARESETN] [get_bd_pins ps8_0_axi_periph/S00_ARESETN] [get_bd_pins reset_block/peripheral_aresetn3] [get_bd_pins spi_ip_0/s_axi_aresetn] [get_bd_pins user_register_0/s00_axi_aresetn] [get_bd_pins usp_rf_data_converter_0/s_axi_aresetn]
+  connect_bd_net -net spi_ip_0_spi_axi_error [get_bd_ports spi_axi_error] [get_bd_pins spi_ip_0/spi_axi_error]
+  connect_bd_net -net spi_ip_0_spi_clk [get_bd_ports spi_clk] [get_bd_pins spi_ip_0/spi_clk]
+  connect_bd_net -net spi_ip_0_spi_lmx_senb [get_bd_ports spi_lmx_senb] [get_bd_pins spi_ip_0/spi_lmx_senb]
+  connect_bd_net -net spi_ip_0_spi_mosi [get_bd_ports spi_mosi] [get_bd_pins spi_ip_0/spi_mosi]
+  connect_bd_net -net spi_ip_0_spi_rx0_senb [get_bd_ports spi_rx0_senb] [get_bd_pins spi_ip_0/spi_rx0_senb]
+  connect_bd_net -net spi_ip_0_spi_rx1_senb [get_bd_ports spi_rx1_senb] [get_bd_pins spi_ip_0/spi_rx1_senb]
+  connect_bd_net -net spi_ip_0_spi_rx2_senb [get_bd_ports spi_rx2_senb] [get_bd_pins spi_ip_0/spi_rx2_senb]
+  connect_bd_net -net spi_ip_0_spi_rx3_senb [get_bd_ports spi_rx3_senb] [get_bd_pins spi_ip_0/spi_rx3_senb]
+  connect_bd_net -net spi_ip_0_spi_tx0_senb [get_bd_ports spi_tx0_senb] [get_bd_pins spi_ip_0/spi_tx0_senb]
+  connect_bd_net -net spi_ip_0_spi_tx1_senb [get_bd_ports spi_tx1_senb] [get_bd_pins spi_ip_0/spi_tx1_senb]
+  connect_bd_net -net spi_ip_0_spi_tx2_senb [get_bd_ports spi_tx2_senb] [get_bd_pins spi_ip_0/spi_tx2_senb]
+  connect_bd_net -net spi_ip_0_spi_tx3_senb [get_bd_ports spi_tx3_senb] [get_bd_pins spi_ip_0/spi_tx3_senb]
+  connect_bd_net -net spi_miso_0_1 [get_bd_ports spi_miso] [get_bd_pins spi_ip_0/spi_miso]
   connect_bd_net -net sys_rst_0_1 [get_bd_ports sys_rst_0] [get_bd_pins ddr4_0/sys_rst]
   connect_bd_net -net trdy_0_1 [get_bd_pins dac_dma_block/trdy_0] [get_bd_pins dac_tile0_block0/S00_AXIS_tready]
   connect_bd_net -net user_register_0_slv_reg19_output [get_bd_pins adc_calib_gpio/Din] [get_bd_pins user_register_0/slv_reg19_output]
@@ -3800,7 +3802,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net xlconcat_1_dout [get_bd_pins adc_calib_gpio/dout2] [get_bd_pins user_register_0/slv_reg18_input]
   connect_bd_net -net xlslice_2_Dout [get_bd_pins adc_calib_gpio/Dout8] [get_bd_pins usp_rf_data_converter_0/adc0_01_int_cal_freeze]
   connect_bd_net -net zynq_ultra_ps_e_0_emio_gpio_o [get_bd_pins adc_0001/Din] [get_bd_pins clk_block/Din] [get_bd_pins dac_tile0_block0/Din] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_o]
-  connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins adc_0001/s_axi_lite_aclk] [get_bd_pins adc_dma_block/s_axi_lite_aclk] [get_bd_pins dac_dma_block/s_axi_lite_aclk] [get_bd_pins ps8_0_axi_periph/ACLK] [get_bd_pins ps8_0_axi_periph/M00_ACLK] [get_bd_pins ps8_0_axi_periph/M01_ACLK] [get_bd_pins ps8_0_axi_periph/M02_ACLK] [get_bd_pins ps8_0_axi_periph/M03_ACLK] [get_bd_pins ps8_0_axi_periph/M04_ACLK] [get_bd_pins ps8_0_axi_periph/M05_ACLK] [get_bd_pins ps8_0_axi_periph/S00_ACLK] [get_bd_pins reset_block/slowest_sync_clk3] [get_bd_pins user_register_0/s00_axi_aclk] [get_bd_pins usp_rf_data_converter_0/s_axi_aclk] [get_bd_pins zynq_ultra_ps_e_0/maxihpm1_fpd_aclk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]
+  connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins adc_0001/s_axi_lite_aclk] [get_bd_pins adc_dma_block/s_axi_lite_aclk] [get_bd_pins dac_dma_block/s_axi_lite_aclk] [get_bd_pins ps8_0_axi_periph/ACLK] [get_bd_pins ps8_0_axi_periph/M00_ACLK] [get_bd_pins ps8_0_axi_periph/M01_ACLK] [get_bd_pins ps8_0_axi_periph/M02_ACLK] [get_bd_pins ps8_0_axi_periph/M03_ACLK] [get_bd_pins ps8_0_axi_periph/M04_ACLK] [get_bd_pins ps8_0_axi_periph/M05_ACLK] [get_bd_pins ps8_0_axi_periph/M06_ACLK] [get_bd_pins ps8_0_axi_periph/S00_ACLK] [get_bd_pins reset_block/slowest_sync_clk3] [get_bd_pins spi_ip_0/s_axi_aclk] [get_bd_pins user_register_0/s00_axi_aclk] [get_bd_pins usp_rf_data_converter_0/s_axi_aclk] [get_bd_pins zynq_ultra_ps_e_0/maxihpm1_fpd_aclk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]
   connect_bd_net -net zynq_ultra_ps_e_0_pl_resetn0 [get_bd_pins reset_block/ext_reset_in1] [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0]
 
   # Create address segments
@@ -3808,6 +3810,7 @@ proc create_root_design { parentCell } {
   assign_bd_address -offset 0xB000A000 -range 0x00001000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs adc_dma_block/axi_dma_1/S_AXI_LITE/Reg] -force
   assign_bd_address -offset 0xB0010000 -range 0x00001000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs adc_0001/axis_flow_control_0/s00_axi/reg] -force
   assign_bd_address -offset 0x000400000000 -range 0x000100000000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs ddr4_0/C0_DDR4_MEMORY_MAP/C0_DDR4_ADDRESS_BLOCK] -force
+  assign_bd_address -offset 0xB0020000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs spi_ip_0/S_AXI/S_AXI_reg] -force
   assign_bd_address -offset 0xB0000000 -range 0x00001000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs adc_0001/tlast_gen_v1_0_0/s00_axi/reg0] -force
   assign_bd_address -offset 0xB0005000 -range 0x00001000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs user_register_0/S00_AXI/S00_AXI_reg] -force
   assign_bd_address -offset 0xB0040000 -range 0x00040000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs usp_rf_data_converter_0/s_axi/Reg] -force
@@ -3836,7 +3839,6 @@ proc create_root_design { parentCell } {
   # Restore current instance
   current_bd_instance $oldCurInst
 
-  validate_bd_design
   save_bd_design
 }
 # End of create_root_design()
@@ -3848,4 +3850,6 @@ proc create_root_design { parentCell } {
 
 create_root_design ""
 
+
+common::send_gid_msg -ssname BD::TCL -id 2053 -severity "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
 

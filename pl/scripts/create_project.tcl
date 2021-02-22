@@ -45,6 +45,7 @@ make_wrapper -files [get_files ./$project_dir/zcu111_rfsoc_trd.srcs/sources_1/bd
 add_files -norecurse ./$project_dir/zcu111_rfsoc_trd.srcs/sources_1/bd/zcu111_rfsoc_trd/hdl/zcu111_rfsoc_trd_wrapper.v
 set_property top zcu111_rfsoc_trd_wrapper [current_fileset]
 add_files -fileset constrs_1 -norecurse $constrs_dir/zcu111_rfsoc_trd_place.xdc
+add_files -fileset constrs_1 -norecurse $constrs_dir/spi_pins.xdc
 add_files -fileset constrs_1 -norecurse $constrs_dir/zcu111_rfsoc_trd_timing.xdc
 set_property used_in_synthesis false [get_files  $constrs_dir/zcu111_rfsoc_trd_timing.xdc]
 update_compile_order -fileset sources_1
