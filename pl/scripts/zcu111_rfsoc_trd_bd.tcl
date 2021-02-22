@@ -136,6 +136,7 @@ user.org:user:spi_ip:1\
 user.org:user:user_register:1.0\
 xilinx.com:ip:usp_rf_data_converter:2.4\
 xilinx.com:ip:xlconcat:2.1\
+xilinx.com:ip:xlconstant:1.1\
 xilinx.com:ip:zynq_ultra_ps_e:3.3\
 xilinx.com:ip:axis_combiner:1.1\
 xilinx.com:ip:axis_data_fifo:2.0\
@@ -143,7 +144,6 @@ user.org:user:axis_flow_control:1.0\
 xilinx.com:ip:axis_register_slice:1.1\
 user.org:user:tlast_gen_v1_0:1.0\
 xilinx.com:ip:xlslice:1.0\
-xilinx.com:ip:xlconstant:1.1\
 xilinx.com:ip:axi_dma:7.1\
 user.org:user:adc_strm_mux:1.0\
 xilinx.com:ip:axis_broadcaster:1.1\
@@ -1835,6 +1835,8 @@ proc create_root_design { parentCell } {
 
 
   # Create ports
+  set hmc_reset [ create_bd_port -dir O -from 0 -to 0 -type clk hmc_reset ]
+  set lmx_ce [ create_bd_port -dir O -from 0 -to 0 -type clk lmx_ce ]
   set spi_axi_error [ create_bd_port -dir O spi_axi_error ]
   set spi_clk [ create_bd_port -dir O -type clk spi_clk ]
   set spi_lmx_senb [ create_bd_port -dir O spi_lmx_senb ]
@@ -2156,6 +2158,18 @@ proc create_root_design { parentCell } {
   set_property -dict [ list \
    CONFIG.NUM_PORTS {3} \
  ] $xlconcat_0
+
+  # Create instance: xlconstant_0, and set properties
+  set xlconstant_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_0 ]
+  set_property -dict [ list \
+   CONFIG.CONST_VAL {0} \
+ ] $xlconstant_0
+
+  # Create instance: xlconstant_1, and set properties
+  set xlconstant_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_1 ]
+  set_property -dict [ list \
+   CONFIG.CONST_VAL {1} \
+ ] $xlconstant_1
 
   # Create instance: zynq_ultra_ps_e_0, and set properties
   set zynq_ultra_ps_e_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.3 zynq_ultra_ps_e_0 ]
@@ -3800,6 +3814,8 @@ proc create_root_design { parentCell } {
   connect_bd_net -net usp_rf_data_converter_0_irq [get_bd_pins usp_rf_data_converter_0/irq] [get_bd_pins xlconcat_0/In0]
   connect_bd_net -net xlconcat_0_dout [get_bd_pins xlconcat_0/dout] [get_bd_pins zynq_ultra_ps_e_0/pl_ps_irq0]
   connect_bd_net -net xlconcat_1_dout [get_bd_pins adc_calib_gpio/dout2] [get_bd_pins user_register_0/slv_reg18_input]
+  connect_bd_net -net xlconstant_0_dout [get_bd_ports hmc_reset] [get_bd_pins xlconstant_0/dout]
+  connect_bd_net -net xlconstant_1_dout [get_bd_ports lmx_ce] [get_bd_pins xlconstant_1/dout]
   connect_bd_net -net xlslice_2_Dout [get_bd_pins adc_calib_gpio/Dout8] [get_bd_pins usp_rf_data_converter_0/adc0_01_int_cal_freeze]
   connect_bd_net -net zynq_ultra_ps_e_0_emio_gpio_o [get_bd_pins adc_0001/Din] [get_bd_pins clk_block/Din] [get_bd_pins dac_tile0_block0/Din] [get_bd_pins zynq_ultra_ps_e_0/emio_gpio_o]
   connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins adc_0001/s_axi_lite_aclk] [get_bd_pins adc_dma_block/s_axi_lite_aclk] [get_bd_pins dac_dma_block/s_axi_lite_aclk] [get_bd_pins ps8_0_axi_periph/ACLK] [get_bd_pins ps8_0_axi_periph/M00_ACLK] [get_bd_pins ps8_0_axi_periph/M01_ACLK] [get_bd_pins ps8_0_axi_periph/M02_ACLK] [get_bd_pins ps8_0_axi_periph/M03_ACLK] [get_bd_pins ps8_0_axi_periph/M04_ACLK] [get_bd_pins ps8_0_axi_periph/M05_ACLK] [get_bd_pins ps8_0_axi_periph/M06_ACLK] [get_bd_pins ps8_0_axi_periph/S00_ACLK] [get_bd_pins reset_block/slowest_sync_clk3] [get_bd_pins spi_ip_0/s_axi_aclk] [get_bd_pins user_register_0/s00_axi_aclk] [get_bd_pins usp_rf_data_converter_0/s_axi_aclk] [get_bd_pins zynq_ultra_ps_e_0/maxihpm1_fpd_aclk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]
@@ -3839,6 +3855,7 @@ proc create_root_design { parentCell } {
   # Restore current instance
   current_bd_instance $oldCurInst
 
+  validate_bd_design
   save_bd_design
 }
 # End of create_root_design()
@@ -3850,6 +3867,4 @@ proc create_root_design { parentCell } {
 
 create_root_design ""
 
-
-common::send_gid_msg -ssname BD::TCL -id 2053 -severity "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
 
