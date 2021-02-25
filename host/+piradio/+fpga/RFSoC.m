@@ -108,6 +108,8 @@ classdef RFSoC < matlab.System
                 end
             end
             
+            size(txblob)
+            
 			nsamp = length(txblob);	% num of samples
 			nbytes = 2*nsamp;		% num of bytes (since int16)
             			
@@ -116,7 +118,7 @@ classdef RFSoC < matlab.System
 			obj.sendCmd("LocalMemInfo 1");
 			obj.sendCmd(sprintf("LocalMemTrigger 1 0 0 0x0000"));
 			write(obj.sockData, sprintf("WriteDataToMemory 0 0 %d 0\r\n", nbytes));
-			write(obj.sockData, txtd, 'int16');
+			write(obj.sockData, txblob, 'int16');
 			pause(0.1);
 
 			% Read response from the Data TCP Socket
