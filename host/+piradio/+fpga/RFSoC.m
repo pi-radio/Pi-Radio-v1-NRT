@@ -6,9 +6,8 @@
 %			Aditya Dhananjay
 %
 % Description:
-%	
 %
-% Date: Last update on Feb. 15, 2021
+% Date: Last update on Feb. 25, 2021
 %
 % Copyright @ 2021
 %
@@ -62,26 +61,38 @@ classdef RFSoC < matlab.System
 			rsp = read(obj.sockData);
 			if (obj.isDebug)
 				fprintf(1, "%s", rsp);
-			end
-			
-			% Transform the received data to a column vector
-			rxtd = reshape(rxtd,[],1);
-			
-			% Initialize a temporary buffer
-			tmp = zeros(2,size(rxtd,1)/32,8);
-			
-			% Convert data to 'double' from 'int16'. We reshape the data
-			% since the ADCs generate 2-samples per clock cycle.
-			rxtd = double(reshape(rxtd,2,[]));
-			
-			% Create the complex samples for each ADC. 
-			for iadc = 1:obj.nadc
-				tmp(:,:,iadc) = rxtd(:,(2*iadc-1):2*obj.nadc:end) + ...
-					1j*rxtd(:,2*iadc:2*obj.nadc:end);
-			end
-			
-			% Return a matrix of nsamp x nadc
-			rxtd = reshape(tmp, [], obj.nadc);
+            end
+            rxtd = rxtd';
+            
+            wf_len = size(rxtd,1)/(obj.nch*2);      % Waveform length
+            adc_data = zeros(wf_len, obj.nch*2);
+            
+            % Rearrange the incoming data as (wf_len x nadc), noting that
+            % in each clock cycle, there are 4 ADC samples that get read in
+            % and sent to the memory
+            for wf_ind = 1:wf_len/4
+                for iadc = 1:obj.nadc
+                    rxtd_startind = (wf_ind-1)*32 + (iadc-1)*4 + 1;
+                    adc_startind = (wf_ind-1)*4 + 1;
+                    adc_data(adc_startind:adc_startind+3, iadc) = rxtd(rxtd_startind:rxtd_startind+3);
+                end
+            end
+            
+            % Remove the DC Offset (Not strictly necessary)
+            for iadc=1:obj.nadc
+                adc_data(:,iadc) = adc_data(:,iadc) - mean(adc_data(:,iadc));
+            end
+            
+            % Assign signals from each ADC to the appropriate channel
+            rxtd = zeros(wf_len, obj.nch);
+            rxtd(:,1) = adc_data(:,1) + 1j*adc_data(:,2);
+            rxtd(:,2) = adc_data(:,3) + 1j*adc_data(:,4);
+            rxtd(:,3) = adc_data(:,5) + 1j*adc_data(:,7);
+            rxtd(:,4) = adc_data(:,4) + 1j*adc_data(:,6);
+            
+            figure(3); clf;
+            plot(real(rxtd(:,1)), 'r'); hold on;
+            plot(imag(rxtd(:,1)), 'b'); hold on;
 		end
 		
 		function send(obj, txtd)
@@ -91,14 +102,14 @@ classdef RFSoC < matlab.System
             
 			% Map the signals to the appropriate DAC
             dac_data = zeros(size(txtd,1), obj.nch*2);
-            dac_data(:,1) = int16(real(txtd(:, 1)));
-            dac_data(:,2) = int16(imag(txtd(:, 1)));
-            dac_data(:,3) = int16(real(txtd(:, 2)));
-            dac_data(:,4) = int16(imag(txtd(:, 2)));
-            dac_data(:,5) = int16(real(txtd(:, 3)));
-            dac_data(:,6) = int16(imag(txtd(:, 3)));
-            dac_data(:,7) = int16(real(txtd(:, 4)));
-            dac_data(:,8) = int16(imag(txtd(:, 4)));
+            dac_data(:,1) = (+1) * int16(imag(txtd(:, 1)));
+            dac_data(:,2) = (+1) * int16(real(txtd(:, 1)));
+            dac_data(:,3) = (+1) * int16(real(txtd(:, 2)));
+            dac_data(:,4) = (-1) * int16(imag(txtd(:, 2)));
+            dac_data(:,5) = (-1) * int16(real(txtd(:, 3)));
+            dac_data(:,6) = (-1) * int16(real(txtd(:, 4)));
+            dac_data(:,7) = (-1) * int16(imag(txtd(:, 3)));
+            dac_data(:,8) = (-1) * int16(imag(txtd(:, 4)));
             
             txblob = zeros(1,size(txtd,1)*obj.ndac);
             for isamp=1:4:size(txtd,1)
@@ -108,7 +119,7 @@ classdef RFSoC < matlab.System
                 end
             end
             
-            size(txblob)
+            size(txblob);
             
 			nsamp = length(txblob);	% num of samples
 			nbytes = 2*nsamp;		% num of bytes (since int16)
@@ -137,18 +148,16 @@ classdef RFSoC < matlab.System
 			fid = fopen(file,'r');
 			while ~feof(fid)
 				tline = fgetl(fid);
-				% The following lines parse a file generated from the 
-				% Xilinx RFDC Windows application:
-				%
-				% tmp = regexp(tline, '\t', 'split');
-				% fprintf(1, '%s\n',tmp{4})
-				% obj.sendCmd(tmp{4});
-				%
-				% However, we are going to parse a simplified version of
+
+				% We are going to parse a simplified version of
 				% the file with only the necessary commands.
 				if (tline(1) ~= '%')
 					fprintf(1, '%s\n', tline);
 					obj.sendCmd(tline)
+                else
+                    % Use comments in the file to create pauses that allow
+                    % the PLLs to stabilize, etc.
+                    pause(0.2);
 				end
 			end
 			fclose(fid);

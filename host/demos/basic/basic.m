@@ -27,7 +27,7 @@ sdr0.fpga.configure('../../config/rfsoc.cfg');
 %% Create time-domain samples and send them to the DACs
 clc;
 nFFT = 1024;	% number of samples to generate for each DAC
-scToUse = 25;
+scToUse = 100;
 
 % Initialize the tx data
 txtd = zeros(nFFT, nch);
@@ -59,8 +59,9 @@ end
 sdr0.send(txtd);
 
 %% Receive continous data from the ADCs
+clc;
 nFFT = 1024;
-nsamp = nFFT*2*nadc;
+nsamp = nFFT*2*nch; % Each channel uses 2 ADCs
 sdr0.set('nread', 0, 'nskip', 0);
 sdr0.ctrlFlow();
 rxtd = sdr0.recv(nsamp);
@@ -70,14 +71,14 @@ scs = linspace(-nFFT/2, nFFT/2-1, nFFT);
 
 figure(2);
 clf;
-for iadc = 1:nadc
-	subplot(2,nadc/2,iadc);
-	plot(scs, 10*log10(abs(fftshift(fft(rxtd(:,iadc))))));
+for ich = 1:nch
+	subplot(1,nch,ich);
+	plot(scs, 10*log10(abs(fftshift(fft(rxtd(:,ich))))));
 	axis tight;	grid on; grid minor;
 	ylabel('Magnitude [dB]', 'interpreter', 'latex', 'fontsize', 12);
 	xlabel('Subcarrier Index', 'interpreter', 'latex', 'fontsize', 12);
-	title(sprintf('ADC %d', iadc), 'interpreter', 'latex', 'fontsize', 14);
-    ylim([20 70]);
+	title(sprintf('Channel %d', ich), 'interpreter', 'latex', 'fontsize', 14);
+    ylim([20 80]);
 end
 
 %% Receive discontinus data from the ADCs
@@ -96,13 +97,13 @@ rxtd = sdr0.recv(nsamp);
 
 figure(2);
 for itimes=1:ntimes
-    for iadc = 1:nadc
-		subplot(2,nadc/2,iadc);
-		plot(scs, 10*log10(abs(fftshift(fft(rxtd(:,itimes,iadc))))));
+    for ich = 1:nadc
+		subplot(2,nadc/2,ich);
+		plot(scs, 10*log10(abs(fftshift(fft(rxtd(:,itimes,ich))))));
 		axis tight; grid on; grid minor;
 		ylabel('Magnitude [dB]', 'interpreter', 'latex', 'fontsize', 12);
 		xlabel('Subcarrier Index', 'interpreter', 'latex', 'fontsize', 12);
-		title(sprintf('ADC %d', iadc), 'interpreter', 'latex', 'fontsize', 14);
+		title(sprintf('ADC %d', ich), 'interpreter', 'latex', 'fontsize', 14);
         ylim([20 70]);
     end
     pause(1);
