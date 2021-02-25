@@ -1,4 +1,4 @@
-%% DEMO: Basic Tx/Rx with the Pi-Radio 140 GHz, 8 channel SDR
+%% DEMO: Basic Tx/Rx to test the RFSoC board. This script is self-contained for local loopback operation.
 
 %% Packages
 % Add the folder containing +piradio to the MATLAB path.
@@ -11,7 +11,10 @@ isDebug = true;		% print debug messages
 ndac = 8;			% num of D/A converters
 nadc = 8;			% num of A/D converters
 nch = 4;            % number of channels
+
 fs = 1966.08e6;		% sample frequency
+                    % (pre-interpolation at the TX)
+                    % (post-decimation at the RX)
 
 %% Create a Fully Digital SDR
 sdr0 = piradio.sdr.FullyDigital('ip', ip, 'mem', mem, ...
