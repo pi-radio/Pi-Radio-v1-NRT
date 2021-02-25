@@ -22,6 +22,7 @@ classdef FullyDigital < matlab.System
 		
 		nadc;
 		ndac;
+        nch;
 		nread = 0;		% ADC flow control parameters.
 		nskip = 0;		% 
 	end
@@ -40,7 +41,8 @@ classdef FullyDigital < matlab.System
 			
 			% Create the RFSoC object
 			obj.fpga = piradio.fpga.RFSoC('ip', obj.ip, 'mem', obj.mem, ...
-				'nadc', obj.nadc, 'ndac', obj.ndac, 'isDebug', obj.isDebug);
+				'nadc', obj.nadc, 'ndac', obj.ndac, 'nch', obj.nch, ...
+                'isDebug', obj.isDebug);
 		end
 		
 		function delete(obj)

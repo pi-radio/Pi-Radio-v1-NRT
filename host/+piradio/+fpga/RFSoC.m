@@ -20,6 +20,7 @@ classdef RFSoC < matlab.System
 		ip;				% IP address
 		nadc;			% num of A/D converters
 		ndac;			% num of D/A converters
+        nch;            % num of channels
 		mem;			% mem type: 'bram' or 'dram'
 		sockData;		% data TCP connection
 		sockCtrl;		% ctrl TCP connection
@@ -86,29 +87,30 @@ classdef RFSoC < matlab.System
 		function send(obj, txtd)
 			% First, we need to process the data from the DACs. The
 			% expected input to this function is a matrix with dimension 
-			% (nsamp x ndac)
-			
-			% Convert the complex input data to a tensor with int16 values
-			tmp = zeros(2, size(txtd,1), size(txtd,2));
-			tmp(1,:,:) = (int16(imag(txtd)));
-			tmp(2,:,:) = (int16(real(txtd)));
-
-			% Since the FPGA needs 2 samples of I/Q for every DAC at each 
-			% clock cyle we need to reshape the tensor
-			tmp = reshape(tmp,2*2,[],obj.ndac);
-			
-			% We interleave the data for every DAC
-			txtd = zeros(4, size(txtd,1)*size(txtd,2)/2);
-			for idac = 1:obj.ndac
-				txtd(:,idac:obj.ndac:end) = reshape(tmp(:,:,idac),4,[]);
-			end
-
-			% Finally, we flatten the tx vector;
-			txtd = reshape(txtd,[],1);
-
-			nsamp = length(txtd);	% num of samples
-			nbytes = 2*nsamp;		% num of bytes
-			
+			% (nsamp x nch). All inputs are complex.
+            
+			% Map the signals to the appropriate DAC
+            dac_data = zeros(size(txtd,1), obj.nch*2);
+            dac_data(:,1) = int16(real(txtd(:, 1)));
+            dac_data(:,2) = int16(imag(txtd(:, 1)));
+            dac_data(:,3) = int16(real(txtd(:, 2)));
+            dac_data(:,4) = int16(imag(txtd(:, 2)));
+            dac_data(:,5) = int16(real(txtd(:, 3)));
+            dac_data(:,6) = int16(imag(txtd(:, 3)));
+            dac_data(:,7) = int16(real(txtd(:, 4)));
+            dac_data(:,8) = int16(imag(txtd(:, 4)));
+            
+            txblob = zeros(1,size(txtd,1)*obj.ndac);
+            for isamp=1:4:size(txtd,1)
+                for idac=1:obj.ndac
+                    txblob( (isamp*8-7)+((idac-1)*4) : (isamp*8-7)+((idac-1)*4+3) ) ...
+                        = dac_data(isamp:isamp+3, idac);
+                end
+            end
+            
+			nsamp = length(txblob);	% num of samples
+			nbytes = 2*nsamp;		% num of bytes (since int16)
+            			
 			% Send the data over TCP with the necessary commands in the
 			% control and data channel
 			obj.sendCmd("LocalMemInfo 1");

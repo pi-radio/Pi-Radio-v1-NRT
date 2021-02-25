@@ -10,29 +10,32 @@ mem = "bram";		% Memory type
 isDebug = true;		% print debug messages
 ndac = 8;			% num of D/A converters
 nadc = 8;			% num of A/D converters
-fs = 983.04e6;		% sample frequency
+nch = 4;            % number of channels
+fs = 1966.08e6;		% sample frequency
 
 %% Create a Fully Digital SDR
 sdr0 = piradio.sdr.FullyDigital('ip', ip, 'mem', mem, ...
 	'ndac', ndac, 'nadc', nadc, 'isDebug', isDebug);
 
+
 % Set the number of DACs and ADCs of the RFSoC
-sdr0.fpga.set('ndac', ndac, 'nadc', nadc);
+sdr0.fpga.set('ndac', ndac, 'nadc', nadc, 'nch', nch);
 
 % Configure the RFSoC
 sdr0.fpga.configure('../../config/rfsoc.cfg');
 
 %% Create time-domain samples and send them to the DACs
+clc;
 nFFT = 1024;	% number of samples to generate for each DAC
 scToUse = 25;
 
 % Initialize the tx data
-txtd = zeros(nFFT, ndac);
-for idac = 1:ndac
+txtd = zeros(nFFT, nch);
+for ich = 1:nch
 	txfd = zeros(nFFT,1);
    	txfd(nFFT/2 + 1 + scToUse) = 1;
 	txfd = fftshift(txfd);
-	txtd(:,idac) = ifft(txfd);
+	txtd(:,ich) = ifft(txfd);
 end
 
 txtd = txtd./abs(max(txtd))*32000;
@@ -42,14 +45,14 @@ scs = linspace(-nFFT/2, nFFT/2-1, nFFT);
 
 figure(1);
 clf;
-for idac = 1:ndac
-	subplot(2,4,idac);
-	plot(scs,(abs(fftshift(fft(txtd(:,idac))))));
+for ich = 1:nch
+	subplot(1,4,ich);
+	plot(scs,(abs(fftshift(fft(txtd(:,ich))))));
 	axis tight;
 	grid on; grid minor;
 	ylabel('Magnitude [Abs]', 'interpreter', 'latex', 'fontsize', 12);
 	xlabel('Subcarrier Index', 'interpreter', 'latex', 'fontsize', 12);
-	title(sprintf('DAC %d', idac), 'interpreter', 'latex', 'fontsize', 14);
+	title(sprintf('DAC %d', ich), 'interpreter', 'latex', 'fontsize', 14);
 end
 
 % Send the data to the DACs
@@ -93,7 +96,7 @@ rxtd = sdr0.recv(nsamp);
 
 figure(2);
 for itimes=1:ntimes
-	for iadc = 1:nadc
+    for iadc = 1:nadc
 		subplot(2,nadc/2,iadc);
 		plot(scs, 10*log10(abs(fftshift(fft(rxtd(:,itimes,iadc))))));
 		axis tight; grid on; grid minor;
