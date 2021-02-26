@@ -85,14 +85,10 @@ classdef RFSoC < matlab.System
             
             % Assign signals from each ADC to the appropriate channel
             rxtd = zeros(wf_len, obj.nch);
-            rxtd(:,1) = adc_data(:,1) + 1j*adc_data(:,2);
+            rxtd(:,1) = adc_data(:,1) - 1j*adc_data(:,2);
             rxtd(:,2) = adc_data(:,3) + 1j*adc_data(:,4);
-            rxtd(:,3) = adc_data(:,5) + 1j*adc_data(:,7);
-            rxtd(:,4) = adc_data(:,4) + 1j*adc_data(:,6);
-            
-            figure(3); clf;
-            plot(real(rxtd(:,1)), 'r'); hold on;
-            plot(imag(rxtd(:,1)), 'b'); hold on;
+            rxtd(:,3) = adc_data(:,6) - 1j*adc_data(:,8);
+            rxtd(:,4) = adc_data(:,5) - 1j*adc_data(:,7);
 		end
 		
 		function send(obj, txtd)
