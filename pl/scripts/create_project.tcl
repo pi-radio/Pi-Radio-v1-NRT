@@ -37,8 +37,9 @@ set_msg_config -suppress -id {Constraints 18-4644}
 file mkdir ./$project_dir/ip_prop
 set c [get_ips ]
 foreach x $c {
-puts "[report_property $x -file ./$project_dir/ip_prop/$x.txt]"
+    puts "[report_property $x -file ./$project_dir/ip_prop/$x.txt]"
 }
+
 # add hdl sources to project
 make_wrapper -files [get_files ./$project_dir/zcu111_rfsoc_trd.srcs/sources_1/bd/zcu111_rfsoc_trd/zcu111_rfsoc_trd.bd] -top
 
@@ -49,7 +50,6 @@ add_files -fileset constrs_1 -norecurse $constrs_dir/spi_pins.xdc
 add_files -fileset constrs_1 -norecurse $constrs_dir/zcu111_rfsoc_trd_timing.xdc
 set_property used_in_synthesis false [get_files  $constrs_dir/zcu111_rfsoc_trd_timing.xdc]
 update_compile_order -fileset sources_1
-# set_property STEPS.SYNTH_DESIGN.ARGS.FANOUT_LIMIT 100 [get_runs synth_1]
 set_property STEPS.SYNTH_DESIGN.ARGS.RETIMING true [get_runs synth_1]
 set_property strategy Flow_PerfOptimized_high [get_runs synth_1]
 set_property strategy Performance_ExplorePostRoutePhysOpt [get_runs impl_1]
@@ -78,7 +78,7 @@ puts "PASS_MSG: Block Design Successfully generated"
 file mkdir $proj_dir/$proj_name.ip_prop
 set c [get_ips ]
 foreach x $c {
-puts "[report_property $x -file $proj_dir/$proj_name.ip_prop/$x.txt]"
+    puts "[report_property $x -file $proj_dir/$proj_name.ip_prop/$x.txt]"
 }
 
 import_files
@@ -88,31 +88,21 @@ reset_run synth_1
 launch_runs synth_1 -jobs 20
 wait_on_run synth_1
 if {[get_property PROGRESS [get_runs synth_1]] != "100%"} {   
-   puts "ERROR: Synthesis failed"   
-} else { puts "PASS_MSG: Synthesis finished Successfully" 
+    puts "ERROR: Synthesis failed"   
+} else {
+    puts "PASS_MSG: Synthesis finished Successfully" 
 
-#	close_project
-exit
-
-launch_runs impl_1 -to_step write_bitstream -jobs 20
-#write_dsa -fixed -force ./hw_description.xsa
-wait_on_run impl_1
-if {[get_property PROGRESS [get_runs impl_1]] != "100%"} {   
-   puts "ERROR: Implementation failed"   
-} else { puts "PASS_MSG: Implementation finished Successfully"
-
-#source ./designs/most_used_impl.tcl
-#source ./designs/report_timing_num.tcl
-#open_run impl_1
-#report_timing_summary -delay_type min_max -report_unconstrained -file ./$project_dir/timing.txt
-file mkdir $proj_dir/$proj_name.sdk
-write_hw_platform -fixed -force  -include_bit -file $proj_dir/$proj_name.sdk/${proj_name}_wrapper.xsa
-
-puts "PASS_MSG: XSA Generated Successfully"
-
-}}
-
-#file copy -force ./$project_dir/$design_nm.runs/impl_1/${design_nm}_wrapper.sysdef ./$project_dir/$design_nm.sdk/[string range $project_dir 6 50].hdf
+    launch_runs impl_1 -to_step write_bitstream -jobs 20
+    wait_on_run impl_1
+    if {[get_property PROGRESS [get_runs impl_1]] != "100%"} {   
+        puts "ERROR: Implementation failed"   
+    } else {
+        puts "PASS_MSG: Implementation finished Successfully"
+        #file mkdir $proj_dir/$proj_name.sdk
+        #write_hw_platform -fixed -force  -include_bit -file $proj_dir/$proj_name.sdk/${proj_name}_wrapper.xsa
+        #puts "PASS_MSG: XSA Generated Successfully"
+    }
+}
 
 close_project
 exit
