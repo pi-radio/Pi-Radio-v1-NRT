@@ -98,9 +98,9 @@ if {[get_property PROGRESS [get_runs synth_1]] != "100%"} {
         puts "ERROR: Implementation failed"   
     } else {
         puts "PASS_MSG: Implementation finished Successfully"
-        #file mkdir $proj_dir/$proj_name.sdk
-        #write_hw_platform -fixed -force  -include_bit -file $proj_dir/$proj_name.sdk/${proj_name}_wrapper.xsa
-        #puts "PASS_MSG: XSA Generated Successfully"
+        file mkdir $proj_dir/$proj_name.sdk
+        write_hw_platform -fixed -force  -include_bit -file $proj_dir/$proj_name.sdk/${proj_name}_wrapper.xsa
+        puts "PASS_MSG: XSA Generated Successfully"
     }
 }
 
