@@ -1445,8 +1445,8 @@ proc create_hier_cell_adc_0001 { parentCell nameHier } {
   connect_bd_net -net clk_wiz_0_clk_out1 [get_bd_pins s_axis_aclk] [get_bd_pins axis_combiner_0/aclk] [get_bd_pins axis_data_fifo_0/s_axis_aclk] [get_bd_pins axis_flow_ctrl_0/axis_aclk] [get_bd_pins axis_register_slice_0/aclk] [get_bd_pins soft_reset/s_axis_aclk]
   connect_bd_net -net ddr4_0_c0_ddr4_ui_clk [get_bd_pins m_axis_aclk] [get_bd_pins axis_data_fifo_0/m_axis_aclk]
   connect_bd_net -net m_axis_tready_0_1 [get_bd_pins m_axis_tready_0] [get_bd_pins axis_data_fifo_0/m_axis_tready]
-  connect_bd_net -net s_axis_aresetn_1 [get_bd_pins s_axis_aresetn] [get_bd_pins axis_combiner_0/aresetn] [get_bd_pins axis_flow_ctrl_0/axis_aresetn] [get_bd_pins soft_reset/s_axis_aresetn]
-  connect_bd_net -net soft_reset_s_axis_aresetn_sync [get_bd_pins axis_data_fifo_0/s_axis_aresetn] [get_bd_pins axis_register_slice_0/aresetn] [get_bd_pins soft_reset/s_axis_aresetn_sync]
+  connect_bd_net -net s_axis_aresetn_1 [get_bd_pins s_axis_aresetn] [get_bd_pins soft_reset/s_axis_aresetn]
+  connect_bd_net -net soft_reset_s_axis_aresetn_sync [get_bd_pins axis_combiner_0/aresetn] [get_bd_pins axis_data_fifo_0/s_axis_aresetn] [get_bd_pins axis_flow_ctrl_0/axis_aresetn] [get_bd_pins axis_register_slice_0/aresetn] [get_bd_pins soft_reset/s_axis_aresetn_sync]
   connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins s_axi_lite_aclk] [get_bd_pins axis_flow_ctrl_0/s00_axi_aclk]
 
   # Restore current instance
@@ -3544,7 +3544,6 @@ proc create_root_design { parentCell } {
   # Restore current instance
   current_bd_instance $oldCurInst
 
-  validate_bd_design
   save_bd_design
 }
 # End of create_root_design()
@@ -3556,4 +3555,6 @@ proc create_root_design { parentCell } {
 
 create_root_design ""
 
+
+common::send_gid_msg -ssname BD::TCL -id 2053 -severity "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
 
