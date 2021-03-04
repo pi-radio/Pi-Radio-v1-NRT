@@ -65,11 +65,18 @@ classdef FullyDigital < matlab.System
 		function data = recv(obj, nsamp)			
 			% Read data from the FPGA
 			data = obj.fpga.recv(nsamp);
-			data(1:10)
 			% Process the data (i.e., calibration, flow control)
 			if (obj.nread ~= 0)
 				data = reshape(data,[],nsamp/obj.nadc/obj.nread/4,obj.nch);
-			end
+            end
+            
+            % Demove DC Offsets
+            nt = size(data,2); %ntimes
+            for ich=1:obj.nch
+                for it=1:nt
+                    data(:,it,ich) = data(:,it,ich) - mean(data(:,it,ich));
+                end
+            end
 		end
 		
 		function send(obj, data)

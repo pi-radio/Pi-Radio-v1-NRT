@@ -69,7 +69,7 @@ for ich = 1:1
 	txtd(:,ich) = ifft(txfd);
 end
 
-txtd = txtd./max(abs(txtd))*5000;
+txtd = txtd./max(abs(txtd))*15000;
 
 % Plot the tx data
 scs = linspace(-nFFT/2, nFFT/2-1, nFFT);
@@ -83,7 +83,7 @@ for ich = 1:nch
 	grid on; grid minor;
 	ylabel('Magnitude [Abs]', 'interpreter', 'latex', 'fontsize', 12);
 	xlabel('Subcarrier Index', 'interpreter', 'latex', 'fontsize', 12);
-	title(sprintf('DAC %d', ich), 'interpreter', 'latex', 'fontsize', 14);
+	title(sprintf('TX Chan %d', ich), 'interpreter', 'latex', 'fontsize', 14);
 end
 
 % Send the data to the DACs
@@ -114,7 +114,7 @@ for itimes=1:ntimes
 		axis tight; grid on; grid minor;
 		ylabel('Magnitude [dB]', 'interpreter', 'latex', 'fontsize', 12);
 		xlabel('Subcarrier Index', 'interpreter', 'latex', 'fontsize', 12);
-		title(sprintf('ADC %d', ich), 'interpreter', 'latex', 'fontsize', 14);
+		title(sprintf('RX Chan %d', ich), 'interpreter', 'latex', 'fontsize', 14);
         ylim([20 70]);
     end
     pause(0.1);
