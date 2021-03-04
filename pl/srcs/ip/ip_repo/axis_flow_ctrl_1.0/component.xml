@@ -1116,8 +1116,8 @@
         <xilinx:taxonomy>AXI_Peripheral</xilinx:taxonomy>
       </xilinx:taxonomies>
       <xilinx:displayName>axis_flow_ctrl_v1.0</xilinx:displayName>
-      <xilinx:coreRevision>6</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2021-03-03T02:33:58Z</xilinx:coreCreationDateTime>
+      <xilinx:coreRevision>7</xilinx:coreRevision>
+      <xilinx:coreCreationDateTime>2021-03-03T22:47:13Z</xilinx:coreCreationDateTime>
       <xilinx:tags>
         <xilinx:tag xilinx:name="ui.data.coregen.dd@463092d6_ARCHIVE_LOCATION">/home/notis/Music/8ch-IF/pl/ip_repo/axis_flow_ctrl_1.0</xilinx:tag>
         <xilinx:tag xilinx:name="ui.data.coregen.dd@3673fd0c_ARCHIVE_LOCATION">/home/notis/Music/8ch-IF/pl/ip_repo/axis_flow_ctrl_1.0</xilinx:tag>
@@ -1216,6 +1216,11 @@
         <xilinx:tag xilinx:name="ui.data.coregen.dd@4a25738a_ARCHIVE_LOCATION">/home/notis/Music/8ch-IF/pl/ip_repo/axis_flow_ctrl_1.0</xilinx:tag>
         <xilinx:tag xilinx:name="ui.data.coregen.dd@23f8a2c0_ARCHIVE_LOCATION">/home/notis/Music/8ch-IF/pl/ip_repo/axis_flow_ctrl_1.0</xilinx:tag>
         <xilinx:tag xilinx:name="ui.data.coregen.dd@1a13f6ec_ARCHIVE_LOCATION">/home/notis/Music/8ch-IF/pl/ip_repo/axis_flow_ctrl_1.0</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@37eba507_ARCHIVE_LOCATION">/home/notis/Music/Pi-Radio-v1-NRT/pl/srcs/ip/ip_repo/axis_flow_ctrl_1.0</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@5e802d44_ARCHIVE_LOCATION">/home/notis/Music/Pi-Radio-v1-NRT/pl/srcs/ip/ip_repo/axis_flow_ctrl_1.0</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@417f5c48_ARCHIVE_LOCATION">/home/notis/Music/Pi-Radio-v1-NRT/pl/srcs/ip/ip_repo/axis_flow_ctrl_1.0</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@29b6864e_ARCHIVE_LOCATION">/home/notis/Music/Pi-Radio-v1-NRT/pl/srcs/ip/ip_repo/axis_flow_ctrl_1.0</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@60e39a95_ARCHIVE_LOCATION">/home/notis/Music/Pi-Radio-v1-NRT/pl/srcs/ip/ip_repo/axis_flow_ctrl_1.0</xilinx:tag>
       </xilinx:tags>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
