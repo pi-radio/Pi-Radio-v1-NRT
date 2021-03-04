@@ -7,7 +7,7 @@
 %
 % Description:
 %
-% Date: Last update on Feb. 25, 2021
+% Date: Last update on Mar. 3, 2021
 %
 % Copyright @ 2021
 %
@@ -20,7 +20,6 @@ classdef RFSoC < matlab.System
 		nadc;			% num of A/D converters
 		ndac;			% num of D/A converters
         nch;            % num of channels
-		mem;			% mem type: 'bram' or 'dram'
 		sockData;		% data TCP connection
 		sockCtrl;		% ctrl TCP connection
 		isDebug;		% if 'true' print debug messages
@@ -51,9 +50,6 @@ classdef RFSoC < matlab.System
 		function rxtd = recv(obj, nsamp)
 			% Send over TCP with the necessary commands in the control and 
 			% data channel
-			obj.sendCmd(sprintf("SetLocalMemSample 0 0 0 %d", nsamp));
-			obj.sendCmd("LocalMemInfo 0");
-			obj.sendCmd(sprintf("LocalMemTrigger 0 4 %d 0x0001", nsamp));
 			write(obj.sockData, sprintf("ReadDataFromMemory 0 0 %d 0\r\n", 2*nsamp));
 			rxtd = read(obj.sockData, nsamp, 'int16'); % read ADC samples
 			pause(0.1);
@@ -61,7 +57,7 @@ classdef RFSoC < matlab.System
 			rsp = read(obj.sockData);
 			if (obj.isDebug)
 				fprintf(1, "%s", rsp);
-            end
+			end
             rxtd = rxtd';
             
             wf_len = size(rxtd,1)/(obj.nch*2);      % Waveform length
@@ -108,14 +104,21 @@ classdef RFSoC < matlab.System
             dac_data(:,8) = (-1) * int16(imag(txtd(:, 4)));
             
             txblob = zeros(1,size(txtd,1)*obj.ndac);
-            for isamp=1:4:size(txtd,1)
-                for idac=1:obj.ndac
-                    txblob( (isamp*8-7)+((idac-1)*4) : (isamp*8-7)+((idac-1)*4+3) ) ...
-                        = dac_data(isamp:isamp+3, idac);
-                end
-            end
-            
-            size(txblob);
+			for isamp=1:4:size(txtd,1)
+				for idac=1:obj.ndac
+				txblob( (isamp*8-7)+((idac-1)*4) : (isamp*8-7)+((idac-1)*4+3) ) ...
+					= dac_data(isamp:isamp+3, idac);
+				end
+			end
+			
+% 			tmp = reshape(dac_data, 4, [], obj.ndac);
+% 			
+%             txblob0 = zeros(4, size(dac_data,1)/4);
+% 			for idac = 1:obj.ndac
+% 				txblob0(:, idac:obj.ndac:end) = reshape(tmp(:,:,idac),4,[]);
+% 			end
+			% Finally, we flatten the tx vector;
+% 			txblob = reshape(txblob,[],1);
             
 			nsamp = length(txblob);	% num of samples
 			nbytes = 2*nsamp;		% num of bytes (since int16)
