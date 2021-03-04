@@ -110,16 +110,7 @@ classdef RFSoC < matlab.System
 					= dac_data(isamp:isamp+3, idac);
 				end
 			end
-			
-% 			tmp = reshape(dac_data, 4, [], obj.ndac);
-% 			
-%             txblob0 = zeros(4, size(dac_data,1)/4);
-% 			for idac = 1:obj.ndac
-% 				txblob0(:, idac:obj.ndac:end) = reshape(tmp(:,:,idac),4,[]);
-% 			end
-			% Finally, we flatten the tx vector;
-% 			txblob = reshape(txblob,[],1);
-            
+			            
 			nsamp = length(txblob);	% num of samples
 			nbytes = 2*nsamp;		% num of bytes (since int16)
             			

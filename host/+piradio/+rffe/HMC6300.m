@@ -28,7 +28,7 @@ classdef HMC6300 < matlab.System
 			end
 		end
 		
-		function configure(obj, file)          
+		function configure(obj, txIndex, file)          
             filestr = fileread(file);
             filebyline = regexp(filestr, '\n', 'split');
             filebyline( cellfun(@isempty,filebyline) ) = [];
@@ -39,20 +39,12 @@ classdef HMC6300 < matlab.System
                 a = filebyfield(i);
                 b = a{1}{1};
 				
-				if (b(1:1) ~= '%')
-					fprintf(1, '%s\n', tline);
-					obj.sendCmd(tline)
-                else
-                    % Use comments in the file to create pauses that allow
-                    % the PLLs to stabilize, etc.
-                    pause(0.2);
-				end
 				
                 if (strcmp(b(1:1), '%') == 1)
                     % Ignore the comment line in the commands file
                 else
                     % fprintf('HMC TX configuration: Line %d: \n', i);
-                    % fprintf('.');
+                    fprintf('.');
                     c = a{1}{1};
                     
 					hmcTx = '4567';

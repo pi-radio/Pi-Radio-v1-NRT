@@ -20,7 +20,10 @@ classdef LMX2595 < matlab.System
 	
 	methods
 		function obj = LMX2595(varargin)
-			% Constructor
+			% Set parameters from constructor arguments.
+			if nargin >= 1
+				obj.set(varargin{:});
+			end
 		end
 		
 		function delete(obj)

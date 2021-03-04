@@ -17,6 +17,9 @@ classdef FullyDigital < matlab.System
 		ip;				% IP address
 		socket;			% TCP socket to control the Pi-Radio platform
 		fpga;			% FPGA object
+        lo;             % LO object (LMX2595)
+        rffeTx;         % Object for the HMC6300 chips
+        rffeRx;         % Object for the HMC6301 chips
 		
 		isDebug;		% if 'true' print debug messages
         figNum;         % Figure number to plot waveforms for this SDR
@@ -45,6 +48,10 @@ classdef FullyDigital < matlab.System
 			obj.fpga = piradio.fpga.RFSoC('ip', obj.ip, ...
 				'nadc', obj.nadc, 'ndac', obj.ndac, 'nch', obj.nch, ...
                 'isDebug', obj.isDebug);
+            
+            obj.lo = piradio.rffe.LMX2595('socket', obj.socket);
+            obj.rffeTx = piradio.rffe.HMC6300('socket', obj.socket);
+            obj.rffeRx = piradio.rffe.HMC6301('socket', obj.socket);
 		end
 		
 		function delete(obj)
@@ -74,119 +81,7 @@ classdef FullyDigital < matlab.System
 			write(obj.socket, sprintf("+ %d %d %d", obj.nread, obj.nskip, obj.nbytes));
 			pause(0.1);
         end
-        
-        function configLMX(obj, file)
-            filestr = fileread(file);
-            filebyline = regexp(filestr, '\n', 'split');
-            filebyline( cellfun(@isempty,filebyline) ) = [];
-            filebyfield = regexp(filebyline, '\t', 'split');
-            
-            for i=1:numel(filebyfield)
-                pause(0.01)
-                a = filebyfield(i);
-                b = a{1}{1};
-                if (strcmp(b(1:1), '%') == 1)
-                    % Ignore the comment line in the commands file
-                else
-                    %fprintf('LMX configuration: Line %d: ', i);
-                    %fprintf('.');
-                    c = a{1}{2};
-                    s = sprintf('%s%s%s', '1', c(3:8), '8');
-                    fprintf('%s\n', s);
-                    write(obj.socket, s)
-                end
-            end
-            fprintf('\n');
-        end
-        
-        function obj = configHMC6300(obj, txIndex, file)           
-            filestr = fileread(file);
-            filebyline = regexp(filestr, '\n', 'split');
-            filebyline( cellfun(@isempty,filebyline) ) = [];
-            filebyfield = regexp(filebyline, '\t', 'split');
-            
-            for i=1:numel(filebyfield)
-                pause(0.01)
-                a = filebyfield(i);
-                b = a{1}{1};
-                if (strcmp(b(1:1), '%') == 1)
-                    % Ignore the comment line in the commands file
-                else
-                    %fprintf('HMC TX configuration: Line %d: \n', i);
-                    fprintf('.');
-                    c = a{1}{1};
-                    
-                    if ((txIndex == 1) || (txIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '4');
-                        write(obj.socket, s);
-                        pause (0.01);
-                    end
-                    if ((txIndex == 2) || (txIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '5');
-                        write(obj.socket, s);
-                        pause (0.01);
-                    end
-                    
-                    if ((txIndex == 3) || (txIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '6');
-                        write(obj.socket, s)
-                        pause (0.01);
-                    end
-                    
-                    if ((txIndex == 4) || (txIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '7');
-                        write(obj.socket, s)
-                        pause (0.01);
-                    end
-                end
-            end
-            fprintf('\n');
-        end
-        
-         function obj = configHMC6301(obj, rxIndex, file)           
-            filestr = fileread(file);
-            filebyline = regexp(filestr, '\n', 'split');
-            filebyline( cellfun(@isempty,filebyline) ) = [];
-            filebyfield = regexp(filebyline, '\t', 'split');
-            
-            for i=1:numel(filebyfield)
-                pause(0.01)
-                a = filebyfield(i);
-                b = a{1}{1};
-                if (strcmp(b(1:1), '%') == 1)
-                    % Ignore the comment line in the commands file
-                else
-                    %fprintf('HMC RX configuration: Line %d: \n', i);
-                    fprintf('.');
-                    c = a{1}{1};
-                    
-                    if ((rxIndex == 1) || (rxIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '0');
-                        write(obj.socket, s);
-                        pause (0.01);
-                    end
-                    if ((rxIndex == 2) || (rxIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '1');
-                        write(obj.socket, s);
-                        pause (0.01);
-                    end
-                    
-                    if ((rxIndex == 3) || (rxIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '2');
-                        write(obj.socket, s)
-                        pause (0.01);
-                    end
-                    
-                    if ((rxIndex == 4) || (rxIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '3');
-                        write(obj.socket, s)
-                        pause (0.01);
-                    end
-                end
-            end
-            fprintf('\n');
-         end % end configHMC6301
-        
+               
 	end
 	
 	methods (Access = 'protected')

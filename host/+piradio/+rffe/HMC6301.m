@@ -35,7 +35,7 @@ classdef HMC6301 < matlab.System
 			end
 		end
 		
-		function configure(obj, file)
+		function configure(obj, rxIndex, file)
             filestr = fileread(file);
             filebyline = regexp(filestr, '\n', 'split');
             filebyline( cellfun(@isempty,filebyline) ) = [];
