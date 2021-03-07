@@ -15,11 +15,11 @@ fs = 1966.08e6;		% sample frequency
                     % (post-decimation at the RX)
 
 %% Create two Fully Digital SDRs (sdr0 and sdr1)
-sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.43", ...
+sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.50", ...
 	'ndac', ndac, 'nadc', nadc, 'nch', nch, 'isDebug', isDebug, ...
     'figNum', 100);
 
-sdr1 = piradio.sdr.FullyDigital('ip', "10.1.1.44", ...
+sdr1 = piradio.sdr.FullyDigital('ip', "10.1.1.51", ...
 	'ndac', ndac, 'nadc', nadc, 'nch', nch, 'isDebug', isDebug, ...
     'figNum', 101);
 
@@ -51,6 +51,13 @@ sdr1.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr0.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 sdr1.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
+% Make sure that the nodes are silent (not transmitting)
+nFFT = 1024;
+txtd = zeros(nFFT, nch);
+sdr0.send(txtd);
+sdr1.send(txtd);
+
+
 %% Decide which is the TX and which is the RX
 sdrTX = sdr0;
 sdrRX = sdr1;
@@ -71,29 +78,14 @@ end
 
 txtd = txtd./max(abs(txtd))*15000;
 
-% Plot the tx data
-scs = linspace(-nFFT/2, nFFT/2-1, nFFT);
-
-figure(1);
-clf;
-for ich = 1:nch
-	subplot(1,4,ich);
-	plot(scs,(abs(fftshift(fft(txtd(:,ich))))));
-	axis tight;
-	grid on; grid minor;
-	ylabel('Magnitude [Abs]', 'interpreter', 'latex', 'fontsize', 12);
-	xlabel('Subcarrier Index', 'interpreter', 'latex', 'fontsize', 12);
-	title(sprintf('TX Chan %d', ich), 'interpreter', 'latex', 'fontsize', 14);
-end
-
 % Send the data to the DACs
 sdrTX.send(txtd);
 
 %% Receive discontinuous data from the ADCs
 nFFT = 1024;	% number of samples to generate for each DAC
-nread = nFFT/4; % read ADC data for 512 cc
+nread = nFFT/4; % read ADC data for 256 cc (4 samples per cc)
 nskip = 1024; % skip ADC data for 512 cc
-ntimes = 10;
+ntimes = 20;
 
 % Then, read data from the ADCs. Note that the returned data should be a
 % tensor with dimensions: nsamp x ntimes x nadc
@@ -104,21 +96,6 @@ sdrRX.set('nread', nread, 'nskip', nskip, 'nbytes', nsamp*2);
 sdrRX.ctrlFlow();
 
 rxtd = sdrRX.recv(nsamp);
-
-scs = linspace(-nFFT/2, nFFT/2-1, nFFT);
-figure(2);
-for itimes=1:ntimes
-    for ich = 1:nch
-		subplot(1, nch, ich);
-		plot(scs, 10*log10(abs(fftshift(fft(rxtd(:,itimes,ich))))));
-		axis tight; grid on; grid minor;
-		ylabel('Magnitude [dB]', 'interpreter', 'latex', 'fontsize', 12);
-		xlabel('Subcarrier Index', 'interpreter', 'latex', 'fontsize', 12);
-		title(sprintf('RX Chan %d', ich), 'interpreter', 'latex', 'fontsize', 14);
-        ylim([20 70]);
-    end
-    pause(0.1);
-end
 
 %% Close the TCP Connections and clear the Workspace variables
 clear sdr0 sdr1;

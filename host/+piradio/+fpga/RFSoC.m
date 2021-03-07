@@ -151,7 +151,7 @@ classdef RFSoC < matlab.System
 				end
 			end
 			fclose(fid);
-		end
+        end
 	end
 	
 	methods (Access = 'protected')
