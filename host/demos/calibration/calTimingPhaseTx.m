@@ -1,5 +1,5 @@
-% This script calibrates the TX-side timing offsets. The TX under
-% calibration is sdrA, and the reference receiver is sdrB.
+% This script calibrates the TX-side timing and phase offsets. The TX under
+% calibration is sdrA, and the reference RX is sdrB.
 
  
 % Configure the RX number of samples, etc
@@ -200,4 +200,4 @@ clear constellation expType iter maxPos maxVal nFFT niter rxtd scIndex;
 clear scMin scMax txfd txIndex txtd m nread nskip nsamp ntimes;
 clear ans corrfd corrtd diff iiter itimes ito nto pos rxfd rxtdShifted;
 clear to tos val cols diffMatrix resTimingErrors toff vec;
-clear intPeakPos intpos c lRef lTx pk ar intPos l;
+clear intPeakPos intpos c lRef lTx pk ar intPos l ph;

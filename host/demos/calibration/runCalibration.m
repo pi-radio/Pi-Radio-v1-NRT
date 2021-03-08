@@ -36,24 +36,45 @@ sdr0.rffeTx.powerDown();
 sdr0.rffeRx.powerDown();
 sdr0.lo.configure('../../config/lmx_registers_58ghz.txt');
 sdr0.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
+sdr0.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
+
 
 % Set up the RF components on sdrB as the Reference RX. Note that we will
 % use only one RX channel
 sdr1.rffeTx.powerDown();
 sdr1.rffeRx.powerDown();
 sdr1.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdr1.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr1.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
-%% Calibrate the timing offsets on the TX side
+%% Calibrate the timing and phase offsets on the TX side
 
 % Calibrate the TX array on sdr0, using sdr1 as the reference RX
 clc;
 sdrA = sdr0;
 sdrB = sdr1;
-calTimingOffsetsTx;
+calTimingPhaseTx;
 sdr0 = sdrA;
 sdr1 = sdrB;
+clear sdrA sdrB;
 
+% Calibrate the TX array on sdr1, using sdr0 as the reference RX
+clc;
+sdrA = sdr1;
+sdrB = sdr0;
+calTimingPhaseTx;
+sdr1 = sdrA;
+sdr0 = sdrB;
+clear sdrA sdrB;
+
+%% Calibrate the timing and phase offsets on the RX side
+% Calibrate the RX array on sdr0, using sdr1 as the reference TX
+clc;
+sdrA = sdr0;
+sdrB = sdr1;
+calTimingPhaseRx;
+sdr0 = sdrA;
+sdr1 = sdrB;
 clear sdrA sdrB;
 
 %% Clear workspace variables
