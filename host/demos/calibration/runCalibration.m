@@ -32,15 +32,27 @@ txtd = zeros(1024, 4);
 sdr0.send(txtd);
 sdr1.send(txtd);
 
+sdr0.rffeTx.powerDown();
+sdr0.rffeRx.powerDown();
+sdr0.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdr0.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
+
+% Set up the RF components on sdrB as the Reference RX. Note that we will
+% use only one RX channel
+sdr1.rffeTx.powerDown();
+sdr1.rffeRx.powerDown();
+sdr1.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdr1.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
+
 %% Calibrate the timing offsets on the TX side
 
 % Calibrate the TX array on sdr0, using sdr1 as the reference RX
 clc;
-sdrA = sdr1;
-sdrB = sdr0;
+sdrA = sdr0;
+sdrB = sdr1;
 calTimingOffsetsTx;
-sdr1 = sdrA;
-sdr0 = sdrB;
+sdr0 = sdrA;
+sdr1 = sdrB;
 
 clear sdrA sdrB;
 

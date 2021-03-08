@@ -33,6 +33,8 @@ classdef FullyDigital < matlab.System
         
         calTxDelay;
         calRxDelay;
+        calTxPhase;
+        calRxPhase;
         
         refConstellation;   % Used only for debug
 	end
@@ -63,6 +65,8 @@ classdef FullyDigital < matlab.System
             
             obj.calTxDelay = zeros(1, obj.nch);
             obj.calRxDelay = zeros(1, obj.nch);
+            obj.calTxPhase = zeros(1, obj.nch);
+            obj.calRxPhase = zeros(1, obj.nch);
             
             % This is used only for debug
             N = 2048;

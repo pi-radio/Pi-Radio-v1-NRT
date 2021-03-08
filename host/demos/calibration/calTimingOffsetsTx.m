@@ -1,53 +1,52 @@
 % This script calibrates the TX-side timing offsets. The TX under
 % calibration is sdrA, and the reference receiver is sdrB.
 
-% Set up the RF components on the sdrA as the TX under calibration. Note
-% that we will use all 4 TX channels
-sdrA.rffeTx.powerDown();
-sdrA.rffeRx.powerDown();
-sdrA.lo.configure('../../config/lmx_registers_58ghz.txt');
-sdrA.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
-
-% Set up the RF components on sdrB as the Reference RX. Note that we will
-% use only one RX channel
-sdrB.rffeTx.powerDown();
-sdrB.rffeRx.powerDown();
-sdrB.lo.configure('../../config/lmx_registers_58ghz.txt');
-sdrB.rffeRx.configure(1, '../../config/hmc6301_registers.txt');
-% 
-% % Configure the RX number of samples, etc
+ 
+% Configure the RX number of samples, etc
 nFFT = 1024;
 nread = nFFT/4; % read ADC data for 256 cc (4 samples per cc)
 nskip = 768;   % skip ADC data for this many cc
 ntimes = 20;    % Number of batches to receive
 nsamp = ntimes*nFFT*nadc;
+sdrA.set('nread', nread, 'nskip', nskip, 'nbytes', nsamp*2);
+sdrA.ctrlFlow();
 sdrB.set('nread', nread, 'nskip', nskip, 'nbytes', nsamp*2);
 sdrB.ctrlFlow();
 
 % Generate the TX waveform
 scMin = -450;
 scMax = 450;
-niter =  5;
+niter =  10;
 constellation = [1+1j 1-1j -1+1j -1-1j];
 
+
 % expType = 1: Make initial measurements of the fractional timing offset
+%
 % expType = 2: Correct the fractional offsets and see if the residual
-% errors are close to 0. Also measure the integer timing offsets.
+% errors are close to 0. Also measure the integer timing offsets. We do not
+% expect integer timing offsets with ~2GHz sampling rate. So we just
+% measure the integer timing offsets, make sure it's zero, but do not
+% present code to correct it (this would be extremely simple to do). Also,
+% measure the per-channel phase offset.
+%
+% expType = 3: Also correct the phase offsets, and make sure that the
+% errors are now close to 0.
 
 % How many unique fractional timing offsets are we going to search through?
-nto = 101;
+nto = 21;
 
 % Used for debug
 ar = zeros(niter, ntimes, nto);
 figure(3); clf;
 
-for expType=1:2
+for expType=1:3
     maxPos = zeros(sdrA.nch, niter, ntimes);
     maxVal = zeros(sdrA.nch, niter, ntimes);
-    intPeakPos = zeros(sdrA.nch, niter, ntimes);
-
-        
+    intPos = zeros(sdrA.nch, niter, ntimes);
+    pk     = zeros(sdrA.nch, niter, ntimes);
+       
     for iter=1:niter
+        fprintf('\n');
         txfd = zeros(nFFT, sdrA.nch);
         txtd = zeros(nFFT, sdrA.nch);
         
@@ -66,6 +65,8 @@ for expType=1:2
             
             if (expType == 2)
                 txtd(:,txIndex) = fracDelay(txtd(:,txIndex), sdrA.calTxDelay(txIndex), nFFT);
+            elseif (expType == 3)
+                txtd(:,txIndex) = exp(j*sdrA.calTxPhase(txIndex)) * fracDelay(txtd(:,txIndex), sdrA.calTxDelay(txIndex), nFFT);
             end
         end % txIndex
         
@@ -74,32 +75,28 @@ for expType=1:2
         sdrA.send(txtd);
         
         % Receive the signal from sdrB
-
         rxtd = sdrB.recv(nsamp);
         size(rxtd);
-          
-        % Try different timing offsets
-        tos = linspace(-0.5, 0.5, nto);
-        for ito = 1:nto
-            to = tos(ito);
-            fprintf('.');
-            for itimes=1:ntimes
-                rxtdShifted = fracDelay(rxtd(:,itimes,1), to, nFFT);
-                rxfd = fft(rxtdShifted);
-                corrfd = zeros(nFFT, sdrA.nch);
-                corrtd = zeros(nFFT, sdrA.nch);
+        
+        for txIndex=1:sdrA.nch
+            tos = linspace(-0.5, 0.5, nto);
+            for ito = 1:nto
+                to = tos(ito);
+                fprintf('.');
+                for itimes=1:ntimes
+                    
+                    if (txIndex == 1)
+                        rxtdShifted = fracDelay(rxtd(:,itimes,1), to, nFFT);
+                    else
+                        rxtdShifted = fracDelay(rxtd(:,itimes,1), to + maxPos(1, iter, itimes), nFFT);
+                    end
 
-                for txIndex = 1:sdrA.nch
+                    rxfd = fft(rxtdShifted);
+                    corrfd = zeros(nFFT, sdrA.nch);
+                    corrtd = zeros(nFFT, sdrA.nch);
 
                     corrfd(:,txIndex) = txfd(:,txIndex) .* conj(rxfd);
                     corrtd(:,txIndex) = ifft(corrfd(:,txIndex));
-                    ar(iter, itimes, ito) = max(mag2db(abs(corrtd(:,txIndex))));
-                    
-                    if ((expType == 2) && (to == 0))
-                        % Measure the integer timing location of the peak
-                        [~, intpos] = max(abs(corrtd(:,txIndex)));                
-                        intPeakPos(txIndex, iter, itimes) = intpos;
-                    end
 
                     [~, pos] = max(abs(corrtd(:,txIndex)));                
                     val = corrtd(pos, txIndex);
@@ -107,79 +104,100 @@ for expType=1:2
                         % We have bound a "better" timing offset
                         maxVal(txIndex, iter, itimes) = val;
                         maxPos(txIndex, iter, itimes) = tos(ito);
-                    end        
-                end % txIndex
-            end %itimes
-        end % ind_to
+                        intPos(txIndex, iter, itimes) = pos;
+                        
+                        % Measure the phase at the "best" to
+                        pk(txIndex, iter, itimes) = val;
+
+                    end % if abs(val) > ...                    
+                end % itimes
+            end % ito
+        end % txIndex
     end % iter
     
-    figure(3);
-    subplot(3,1,expType);
+    
+    % Calculate the fractional and integer timing offsets
     cols = 'yrgb'; % Colors for the plots
-    diffMatrix = zeros(sdrA.nch, niter, ntimes);
+    maxPos(1,:,:) = maxPos(1,:,:) - maxPos(1,:,:); % For txIndex=1, everything should be 0
+    figure(3);
     for txIndex=1:sdrA.nch
-        for iter=1:niter
-            for itimes=1:ntimes
-                diffMatrix(txIndex, iter, itimes) = maxPos(txIndex, iter, itimes) - maxPos(1, iter, itimes);
-                if diffMatrix(txIndex, iter, itimes) > 0.5
-                    diffMatrix(txIndex, iter, itimes) = diffMatrix(txIndex, iter, itimes) - 1;
-                end
-                if diffMatrix(txIndex, iter, itimes) < -0.5
-                    diffMatrix(txIndex, iter, itimes) = diffMatrix(txIndex, iter, itimes) + 1;
-                end
-            end %itimes
-        end % iter
         
-        l = diffMatrix(txIndex, :, :);
-        l = reshape(l, [], 1);
-        plot(l, cols(txIndex)); hold on;
-        ylim([-0.5 0.5]);
-        xlabel('Iteration (UnSorted)');
-        
-        if (expType == 1)
-            title('Pre-cal: Fractional Timing offsets');
-        elseif (expType == 2)
-            title('Post-Cal: Fractional Timing Offsets');
-        end
-        
-    end % txIndex
-    
-    resTimingErrors = zeros(1, sdrA.nch);
-    for txIndex=1:sdrA.nch
-        l = diffMatrix(txIndex,:,:);
+        % Fractional
+        l = maxPos(txIndex, :, :);
         l = reshape(l, 1, []);
-        vec = 0 + 0*j;
-        for iter=1:length(l)
-            vec = vec + exp(1j*2*pi*l(iter));
+        if (expType == 1)
+            figure(3);
+            subplot(5,1,1);
+            plot(l, cols(txIndex));
+            title('Pre-Cal: Fractional Timing Offsets');
+            xlabel('Iteration (Unsorted)');
+            hold on;
+            ylim([-0.5 0.5]);
+            c = sum(exp(j*2*pi*l));
+            c = angle(c);
+            c = c /(2*pi);
+            sdrA.calTxDelay(txIndex) = c;
+        elseif (expType == 2)
+            figure(3);
+            subplot(5,1,2);
+            plot(l, cols(txIndex));
+            title('Post-Cal: Fractional Timing Offsets')
+            xlabel('Iteration (Unsorted)');
+            hold on;
+            ylim([-0.5 0.5]);
         end
-        toff = angle(vec) / (2*pi);
-        resTimingErrors(txIndex) = toff;
-    end
-    
-    if (expType == 1)
-        sdrA.calTxDelay = resTimingErrors;
-    end
-    
-    resTimingErrors % If we want to print this out
-    
+        
+        % Integer
+        l = intPos(txIndex, :, :) - intPos(1, :, :);
+        l = reshape(l, 1, []);
+        l = sort(l);
+        if (expType == 2)
+            figure(3);
+            subplot(5,1,3);
+            plot(l, cols(txIndex));
+            title('Post-Cal: Integer Timing Offsets');
+            hold on;
+            ylim([-2 2]);
+            xlabel('Iteration (sorted). Consider only the middle (median) iteration. Should be 0.');
+        end
+        
+        % Phase
+        lRef = pk(1, :, :);
+        lRef = reshape(lRef, 1, []);
+        lTx = pk(txIndex, :, :);
+        lTx = reshape(lTx, 1, []);
+        
+        if (expType == 2)
+            subplot(5,1,4);
+            ph = wrapToPi(angle(lTx) - angle(lRef));
+            plot(ph, cols(txIndex)); hold on;
+            ylim([-pi pi]);
+            title('Pre-Cal: LO Phase Offsets');
+            l = angle(sum(exp(j*ph)));            
+            sdrA.calTxPhase(txIndex) = l;
+        elseif (expType == 3)
+            subplot(5,1,5);
+            ph = wrapToPi(angle(lTx) - angle(lRef));
+            plot(ph, cols(txIndex)); hold on;
+            ylim([-pi pi]);
+            title('Post-Cal: LO Phase Offsets');
+        end
+        
+    end % txIndex    
 end % expType
 
-figure(3);
-subplot(3,1,3);
-for txIndex = 1:sdrA.nch
-    lRef = intPeakPos(1,:,:);
-    lRef = reshape(lRef,1,[]);
-    lTx  = intPeakPos(txIndex,:,:);
-    lTx  = reshape(lTx, 1, []);
-    plot(sort(lTx - lRef), cols(txIndex)); hold on;
-    title('Integer Timing Offsets');
-    ylim([-2 2]);
-    xlabel('Iteration (Sorted). Consider only the median (middle) iteration, which should be 0');
-end
+
+
+% Stop transmitting and do a dummy read
+txtd = zeros(nFFT, sdrA.nch);
+sdrA.send(txtd);
+sdrB.send(txtd);
+sdrA.recv(nsamp);
+sdrB.recv(nsamp);
 
 % Clear workspace variables
 clear constellation expType iter maxPos maxVal nFFT niter rxtd scIndex;
 clear scMin scMax txfd txIndex txtd m nread nskip nsamp ntimes;
 clear ans corrfd corrtd diff iiter itimes ito nto pos rxfd rxtdShifted;
-clear to tos val l ar cols diffMatrix resTimingErrors toff vec;
-clear intPeakPos lRef lTx intpos;
+clear to tos val cols diffMatrix resTimingErrors toff vec;
+clear intPeakPos intpos c lRef lTx pk ar intPos l;
