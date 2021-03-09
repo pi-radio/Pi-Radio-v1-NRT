@@ -14,28 +14,32 @@
 % Copyright @ 2021
 %
 classdef HMC6301 < matlab.System
-	properties
-		socket;		% TCP socket used to configure the HMC6301
-	end
-	
-	methods
-		function obj = HMC6301(varargin)
-			% Constructor
-			
+    properties
+        socket;		% TCP socket used to configure the HMC6301
+    end
+    
+    methods
+        function obj = HMC6301(varargin)
+            % Constructor
+            
             % Set parameters from constructor arguments.
-			if nargin >= 1
-				obj.set(varargin{:});
-			end
-		end
-		
-		function powerDown(obj)
-			for ihmc = '0123'
-				write(obj.socket, sprintf('%s%s%s', '0', 'ff03c0', ihmc));
-				pause(0.1);
-			end
-		end
-		
-		function configure(obj, rxIndex, file)
+            if nargin >= 1
+                obj.set(varargin{:});
+            end
+        end
+        
+        function delete(obj)
+            % Destructor
+        end
+        
+        function powerDown(obj)
+            for ihmc = '0123'
+                write(obj.socket, sprintf('%s%s%s', '0', 'ff03c0', ihmc));
+                pause(0.1);
+            end
+        end
+        
+        function configure(obj, rxIndex, file)
             filestr = fileread(file);
             filebyline = regexp(filestr, '\n', 'split');
             filebyline( cellfun(@isempty,filebyline) ) = [];
@@ -52,53 +56,41 @@ classdef HMC6301 < matlab.System
                     fprintf('.');
                     c = a{1}{1};
                     
-                    if ((rxIndex == 1) || (rxIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '0');
-                        write(obj.socket, s);
-                        pause (0.01);
-                    end
-                    if ((rxIndex == 2) || (rxIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '1');
-                        write(obj.socket, s);
-                        pause (0.01);
-                    end
-                    
-                    if ((rxIndex == 3) || (rxIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '2');
-                        write(obj.socket, s)
-                        pause (0.01);
-                    end
-                    
-                    if ((rxIndex == 4) || (rxIndex == 9))
-                        s = sprintf('%s%s%s', '0', c(1:6), '3');
-                        write(obj.socket, s)
+                    hmcRx = '0123';
+                    if (rxIndex == 9)
+                        for ihmc = hmcRx
+                            write(obj.socket, sprintf('%s%s%s', '0', c(1:6), ihmc));
+                            pause (0.01);
+                        end
+                    else
+                        write(obj.socket, sprintf('%s%s%s', '0', c(1:6), hmcRx(rxIndex)));
                         pause (0.01);
                     end
                 end
             end
             fprintf('\n');
-		end
-		
-		function attn(obj, bbAttn, ifAttn, rfAttn)
-			switch ifAttn
-				case 00
-					val = 'f0a3c0';
-				case 05
-					val = 'f2a3c0';
-				case 10
-					val = 'f1a3c0';
-				case 15
-					val = 'f3a3c0';
-				case 20
-					val = 'ffa3c0';
-				otherwise
-					val = '000000';
-			end
+        end
+        
+        function attn(obj, bbAttn, ifAttn, rfAttn)
+            switch ifAttn
+                case 00
+                    val = 'f0a3c0';
+                case 05
+                    val = 'f2a3c0';
+                case 10
+                    val = 'f1a3c0';
+                case 15
+                    val = 'f3a3c0';
+                case 20
+                    val = 'ffa3c0';
+                otherwise
+                    val = '000000';
+            end
             
-			for ihmc = '0123'
-				write(obj.socket, sprintf('%s%s%s', '0', val, ihmc));
-				pause (0.01);
-			end
+            for ihmc = '0123'
+                write(obj.socket, sprintf('%s%s%s', '0', val, ihmc));
+                pause (0.01);
+            end
             
             switch rfAttn
                 case 00
@@ -109,15 +101,15 @@ classdef HMC6301 < matlab.System
                     val = '0913c0';
                 case 18
                     val = '1913c0';
-				otherwise
-					val = '000000';
+                otherwise
+                    val = '000000';
             end
             
-			for ihmc = '0123'
-				write(obj.socket, sprintf('%s%s%s', '0', val, ihmc));
-				pause (0.01);
-			end
-			
+            for ihmc = '0123'
+                write(obj.socket, sprintf('%s%s%s', '0', val, ihmc));
+                pause (0.01);
+            end
+            
             switch bbAttn
                 case 0
                     r01 = '0883c0';
@@ -140,17 +132,16 @@ classdef HMC6301 < matlab.System
                 case 36
                     r01 = '3883c0';
                     r02 = 'c043c0';
-				otherwise
-					r01 = '000000';
-					r02 = '000000';
+                otherwise
+                    r01 = '000000';
+                    r02 = '000000';
             end
             
-			for ihmc = '0123'
-				write(obj.socket, sprintf('%s%s%s', '0', r01, ihmc));
-				write(obj.socket, sprintf('%s%s%s', '0', r02, ihmc));
-				pause (0.01);
-			end
-		end
-	end
+            for ihmc = '0123'
+                write(obj.socket, sprintf('%s%s%s', '0', r01, ihmc));
+                write(obj.socket, sprintf('%s%s%s', '0', r02, ihmc));
+                pause (0.01);
+            end
+        end
+    end
 end
-

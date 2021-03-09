@@ -2,15 +2,10 @@
 % calibration is sdrA, and the reference TX is sdrB.
 
 % Configure the RX number of samples, etc
-nFFT = 1024;
-nread = nFFT/4; % read ADC data for 256 cc (4 samples per cc)
-nskip = 768;   % skip ADC data for this many cc
+nFFT = 1024;    % num of FFT points
+nread = nFFT; % read ADC data for 256 cc (4 samples per cc)
+nskip = 768*4;   % skip ADC data for this many cc
 ntimes = 20;    % Number of batches to receive
-nsamp = ntimes*nFFT*nadc;
-sdrA.set('nread', nread, 'nskip', nskip, 'nbytes', nsamp*2);
-sdrA.ctrlFlow();
-sdrB.set('nread', nread, 'nskip', nskip, 'nbytes', nsamp*2);
-sdrB.ctrlFlow();
 
 % Generate the TX waveform
 scMin = -450;

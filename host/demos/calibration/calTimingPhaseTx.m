@@ -1,18 +1,12 @@
 % This script calibrates the TX-side timing and phase offsets. The TX under
 % calibration is sdrA, and the reference RX is sdrB.
 
- 
+
 % Configure the RX number of samples, etc
 nFFT = 1024;
-nread = nFFT/4; % read ADC data for 256 cc (4 samples per cc)
-nskip = 768;   % skip ADC data for this many cc
+nread = nFFT; % read ADC data for 256 cc (4 samples per cc)
+nskip = 768*4;   % skip ADC data for this many cc
 ntimes = 20;    % Number of batches to receive
-nsamp = ntimes*nFFT*nadc;
-sdrA.set('nread', nread, 'nskip', nskip, 'nbytes', nsamp*2);
-sdrA.ctrlFlow();
-sdrB.set('nread', nread, 'nskip', nskip, 'nbytes', nsamp*2);
-sdrB.ctrlFlow();
-
 % Generate the TX waveform
 scMin = -450;
 scMax = 450;
@@ -44,7 +38,7 @@ for expType=1:3
     maxVal = zeros(sdrA.nch, niter, ntimes);
     intPos = zeros(sdrA.nch, niter, ntimes);
     pk     = zeros(sdrA.nch, niter, ntimes);
-       
+    
     for iter=1:niter
         fprintf('\n');
         txfd = zeros(nFFT, sdrA.nch);
@@ -66,7 +60,7 @@ for expType=1:3
             if (expType == 2)
                 txtd(:,txIndex) = fracDelay(txtd(:,txIndex), sdrA.calTxDelay(txIndex), nFFT);
             elseif (expType == 3)
-                txtd(:,txIndex) = exp(j*sdrA.calTxPhase(txIndex)) * fracDelay(txtd(:,txIndex), sdrA.calTxDelay(txIndex), nFFT);
+                txtd(:,txIndex) = exp(1j*sdrA.calTxPhase(txIndex)) * fracDelay(txtd(:,txIndex), sdrA.calTxDelay(txIndex), nFFT);
             end
         end % txIndex
         
@@ -75,7 +69,7 @@ for expType=1:3
         sdrA.send(txtd);
         
         % Receive the signal from sdrB
-        rxtd = sdrB.recv(nsamp);
+        rxtd = sdrB.recv(nread,nskip,ntimes);
         size(rxtd);
         
         for txIndex=1:sdrA.nch
@@ -90,15 +84,15 @@ for expType=1:3
                     else
                         rxtdShifted = fracDelay(rxtd(:,itimes,1), to + maxPos(1, iter, itimes), nFFT);
                     end
-
+                    
                     rxfd = fft(rxtdShifted);
                     corrfd = zeros(nFFT, sdrA.nch);
                     corrtd = zeros(nFFT, sdrA.nch);
-
+                    
                     corrfd(:,txIndex) = txfd(:,txIndex) .* conj(rxfd);
                     corrtd(:,txIndex) = ifft(corrfd(:,txIndex));
-
-                    [~, pos] = max(abs(corrtd(:,txIndex)));                
+                    
+                    [~, pos] = max(abs(corrtd(:,txIndex)));
                     val = corrtd(pos, txIndex);
                     if abs(val) > abs(maxVal(txIndex, iter, itimes))
                         % We have bound a "better" timing offset
@@ -108,8 +102,8 @@ for expType=1:3
                         
                         % Measure the phase at the "best" to
                         pk(txIndex, iter, itimes) = val;
-
-                    end % if abs(val) > ...                    
+                        
+                    end % if abs(val) > ...
                 end % itimes
             end % ito
         end % txIndex
@@ -133,7 +127,7 @@ for expType=1:3
             xlabel('Iteration (Unsorted)');
             hold on;
             ylim([-0.5 0.5]);
-            c = sum(exp(j*2*pi*l));
+            c = sum(exp(1j*2*pi*l));
             c = angle(c);
             c = c /(2*pi);
             sdrA.calTxDelay(txIndex) = c;
@@ -173,7 +167,7 @@ for expType=1:3
             plot(ph, cols(txIndex)); hold on;
             ylim([-pi pi]);
             title('Pre-Cal: LO Phase Offsets');
-            l = angle(sum(exp(j*ph)));            
+            l = angle(sum(exp(1j*ph)));
             sdrA.calTxPhase(txIndex) = l;
         elseif (expType == 3)
             subplot(5,1,5);
@@ -183,17 +177,15 @@ for expType=1:3
             title('Post-Cal: LO Phase Offsets');
         end
         
-    end % txIndex    
+    end % txIndex
 end % expType
-
-
 
 % Stop transmitting and do a dummy read
 txtd = zeros(nFFT, sdrA.nch);
 sdrA.send(txtd);
 sdrB.send(txtd);
-sdrA.recv(nsamp);
-sdrB.recv(nsamp);
+sdrA.recv(nread,nskip,ntimes);
+sdrB.recv(nread,nskip,ntimes);
 
 % Clear workspace variables
 clear constellation expType iter maxPos maxVal nFFT niter rxtd scIndex;

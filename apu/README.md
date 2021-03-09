@@ -1,4 +1,7 @@
-# Instructions for building the SD card images
+# Pi-Radio Non-Realtime Petalinux Project
+
+## Dependencies
+* [Petalinux 2020.2](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/embedded-design-tools.html)
 
 ## Create the project
 ```console
@@ -14,7 +17,7 @@ In the dialog indicate in the 'FPGA Manager' the location of the Vivado project.
 
 ## Build the project
 ```console
-% petalinux-build
+$ petalinux-build
 ```
 
 ## Create the SD card images
@@ -46,10 +49,11 @@ Navigate to the `apu/plnx` folder and execute the following command.
 $ petalinux-config
 ```
 In the dialog clear the location of the Vivado project of the FPGA Manager. Then, package the project by executing the following commands.
+Navigate to the `apu` folder.
 ```console
-$ cd ..
 $ petalinux-package --bsp -p plnx --clean --output piradio_plnx.bsp --force
 ```
 
 ## More information
-For more information about building the Petalinux image please refer to this [guide](https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/571605227/Petalinux+Build+Tutorial+for+ZU+RFSoC+ZCU111+2020.1).
+* For more information on installing the Petalinux please refer to this [documentation](https://www.xilinx.com/support/documentation/sw_manuals/xilinx2020_2/ug1144-petalinux-tools-reference-guide.pdf).
+* For more information on building the Petalinux image please refer to this [guide](https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/571605227/Petalinux+Build+Tutorial+for+ZU+RFSoC+ZCU111+2020.1).

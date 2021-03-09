@@ -14,21 +14,21 @@
 % Copyright @ 2021
 %
 classdef LMX2595 < matlab.System
-	properties
-		socket;
-	end
-	
-	methods
-		function obj = LMX2595(varargin)
-			% Set parameters from constructor arguments.
-			if nargin >= 1
-				obj.set(varargin{:});
-			end
-		end
-		
-		function delete(obj)
-			% Destructor
-		end
+    properties
+        socket;
+    end
+    
+    methods
+        function obj = LMX2595(varargin)
+            % Set parameters from constructor arguments.
+            if nargin >= 1
+                obj.set(varargin{:});
+            end
+        end
+        
+        function delete(obj)
+            % Destructor
+        end
         
         function configure(obj, file)
             filestr = fileread(file);
@@ -53,6 +53,5 @@ classdef LMX2595 < matlab.System
             end
             fprintf('\n');
         end
-	end
+    end
 end
-

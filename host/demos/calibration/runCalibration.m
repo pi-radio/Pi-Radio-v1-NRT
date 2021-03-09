@@ -7,22 +7,21 @@
 % Add the folder containing +piradio to the MATLAB path.
 addpath('../../');
 addpath('../../helper');
-isDebug = false;		% print debug messages
-ndac = 8;			% num of D/A converters
-nadc = 8;			% num of A/D converters
-nch = 4;            % number of channels
+isDebug = true;		% print debug messages
 
-fs = 1966.08e6;		% sample frequency
-                    % (pre-interpolation at the TX)
-                    % (post-decimation at the RX)
-
-sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.50", ...
-	'ndac', ndac, 'nadc', nadc, 'nch', nch, 'isDebug', isDebug, ...
+sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.50", 'isDebug', isDebug, ...
     'figNum', 100);
 
-sdr1 = piradio.sdr.FullyDigital('ip', "10.1.1.51", ...
-	'ndac', ndac, 'nadc', nadc, 'nch', nch, 'isDebug', isDebug, ...
+sdr1 = piradio.sdr.FullyDigital('ip', "10.1.1.51", 'isDebug', isDebug, ...
     'figNum', 101);
+
+% Read some parameters of the SDR in local variables
+nadc = sdr0.nadc;   % num of A/D converters
+ndac = sdr0.ndac;   % num of D/A converters
+nch = sdr0.nch;     % num of channels
+fs = sdr0.fs;       % sample frequency in Hz
+                    % (pre-interpolation at the TX)
+                    % (post-decimation at the RX)
 
 sdr0.fpga.configure('../../config/rfsoc.cfg');
 sdr1.fpga.configure('../../config/rfsoc.cfg');
