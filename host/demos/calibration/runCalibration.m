@@ -94,5 +94,25 @@ sdr0 = sdrRx;
 sdr1 = sdrTx;
 clear sdrTx sdrRx;
 
+% Calibrate the RX array on sdr1, using sdr0 as the reference TX
+clc;
+sdrTx = sdr0;
+sdrRx = sdr1;
+calIQrx;
+sdr1 = sdrRx;
+sdr0 = sdrTx;
+clear sdrTx sdrRx;
+
+%% Calibrate the TX-side IQ Imbalances
+
+% Calibrate the TX array on sdr0, using sdr1 as the reference RX
+clc;
+sdrTx = sdr0;
+sdrRx = sdr1;
+calIQtx;
+sdr1 = sdrRx;
+sdr0 = sdrTx;
+clear sdrTx sdrRx;
+
 %% Clear workspace variables
 clear isDebug nadc ndac nch sdr0 sdr1 fs;
