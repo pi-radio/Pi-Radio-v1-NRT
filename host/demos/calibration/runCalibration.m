@@ -1,5 +1,5 @@
 % This is the "master" script to run calibration. There are two nodes: sdr0
-% and sdr1. The "slave" scripts require references to sdrA and sdrB, and
+% and sdr1. The "slave" scripts require references to sdrTx and sdrRx, and
 % this is controlled by the master script.
 
 %% Set up the Nodes for Calibration (the baseband subsystem)
@@ -7,7 +7,7 @@
 % Add the folder containing +piradio to the MATLAB path.
 addpath('../../');
 addpath('../../helper');
-isDebug = true;		% print debug messages
+isDebug = false;		% print debug messages
 
 sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.50", 'isDebug', isDebug, ...
     'figNum', 100);
@@ -26,7 +26,7 @@ fs = sdr0.fs;       % sample frequency in Hz
 sdr0.fpga.configure('../../config/rfsoc.cfg');
 sdr1.fpga.configure('../../config/rfsoc.cfg');
 
-% Make sure we aren't transmitting anything
+% Make sure we aren't transmitting anythingsdrB
 txtd = zeros(1024, 4);
 sdr0.send(txtd);
 sdr1.send(txtd);
@@ -37,9 +37,6 @@ sdr0.lo.configure('../../config/lmx_registers_58ghz.txt');
 sdr0.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr0.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
-
-% Set up the RF components on sdrB as the Reference RX. Note that we will
-% use only one RX channel
 sdr1.rffeTx.powerDown();
 sdr1.rffeRx.powerDown();
 sdr1.lo.configure('../../config/lmx_registers_58ghz.txt');
@@ -50,31 +47,52 @@ sdr1.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
 % Calibrate the TX array on sdr0, using sdr1 as the reference RX
 clc;
-sdrA = sdr0;
-sdrB = sdr1;
+sdrTx = sdr0;
+sdrRx = sdr1;
 calTimingPhaseTx;
-sdr0 = sdrA;
-sdr1 = sdrB;
-clear sdrA sdrB;
+sdr0 = sdrTx;
+sdr1 = sdrRx;
+clear sdrTx sdrRx;
 
 % Calibrate the TX array on sdr1, using sdr0 as the reference RX
 clc;
-sdrA = sdr1;
-sdrB = sdr0;
+sdrTx = sdr1;
+sdrRx = sdr0;
 calTimingPhaseTx;
-sdr1 = sdrA;
-sdr0 = sdrB;
-clear sdrA sdrB;
+sdr1 = sdrTx;
+sdr0 = sdrRx;
+clear sdrTx sdrRx;
 
 %% Calibrate the timing and phase offsets on the RX side
+
 % Calibrate the RX array on sdr0, using sdr1 as the reference TX
 clc;
-sdrA = sdr0;
-sdrB = sdr1;
+sdrTx = sdr1;
+sdrRx = sdr0;
 calTimingPhaseRx;
-sdr0 = sdrA;
-sdr1 = sdrB;
-clear sdrA sdrB;
+sdr0 = sdrRx;
+sdr1 = sdrTx;
+clear sdrTx sdrRx;
+
+% Calibrate the RX array on sdr1, using sdr0 as the reference TX
+clc;
+sdrTx = sdr0;
+sdrRx = sdr1;
+calTimingPhaseRx;
+sdr1 = sdrRx;
+sdr0 = sdrTx;
+clear sdrTx sdrRx;
+
+%% Calibrate the RX-side IQ Imbalances
+
+% Calibrate the RX array on sdr0, using sdr1 as the reference TX
+clc;
+sdrTx = sdr1;
+sdrRx = sdr0;
+calIQrx;
+sdr0 = sdrRx;
+sdr1 = sdrTx;
+clear sdrTx sdrRx;
 
 %% Clear workspace variables
 clear isDebug nadc ndac nch sdr0 sdr1 fs;

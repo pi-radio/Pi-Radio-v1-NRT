@@ -1,5 +1,5 @@
 % This script calibrates the TX-side timing and phase offsets. The TX under
-% calibration is sdrA, and the reference RX is sdrB.
+% calibration is sdrTx, and the reference RX is sdrRx.
 
 
 % Configure the RX number of samples, etc
@@ -34,21 +34,21 @@ ar = zeros(niter, ntimes, nto);
 figure(3); clf;
 
 for expType=1:3
-    maxPos = zeros(sdrA.nch, niter, ntimes);
-    maxVal = zeros(sdrA.nch, niter, ntimes);
-    intPos = zeros(sdrA.nch, niter, ntimes);
-    pk     = zeros(sdrA.nch, niter, ntimes);
+    maxPos = zeros(sdrTx.nch, niter, ntimes);
+    maxVal = zeros(sdrTx.nch, niter, ntimes);
+    intPos = zeros(sdrTx.nch, niter, ntimes);
+    pk     = zeros(sdrTx.nch, niter, ntimes);
     
     for iter=1:niter
         fprintf('\n');
-        txfd = zeros(nFFT, sdrA.nch);
-        txtd = zeros(nFFT, sdrA.nch);
+        txfd = zeros(nFFT, sdrTx.nch);
+        txtd = zeros(nFFT, sdrTx.nch);
         
         m = 0;
-        for txIndex=1:sdrA.nch
+        for txIndex=1:sdrTx.nch
             for scIndex = scMin:scMax
                 if scIndex ~= 0
-                    %txfd(nFFT/2 + 1 + scIndex, txIndex) = sdrA.refConstellation(nFFT/2 + 1 + scIndex, txIndex);
+                    %txfd(nFFT/2 + 1 + scIndex, txIndex) = sdrTx.refConstellation(nFFT/2 + 1 + scIndex, txIndex);
                     txfd(nFFT/2 + 1 + scIndex, txIndex) = constellation(randi(4));
                 end
             end % scIndex
@@ -58,21 +58,21 @@ for expType=1:3
             m = max( max(abs(txtd(:,txIndex))), m);
             
             if (expType == 2)
-                txtd(:,txIndex) = fracDelay(txtd(:,txIndex), sdrA.calTxDelay(txIndex), nFFT);
+                txtd(:,txIndex) = fracDelay(txtd(:,txIndex), sdrTx.calTxDelay(txIndex), nFFT);
             elseif (expType == 3)
-                txtd(:,txIndex) = exp(1j*sdrA.calTxPhase(txIndex)) * fracDelay(txtd(:,txIndex), sdrA.calTxDelay(txIndex), nFFT);
+                txtd(:,txIndex) = exp(1j*sdrTx.calTxPhase(txIndex)) * fracDelay(txtd(:,txIndex), sdrTx.calTxDelay(txIndex), nFFT);
             end
         end % txIndex
         
-        % Scale and send the signal from sdrA
+        % Scale and send the signal from sdrTx
         txtd = txtd/m*15000;
-        sdrA.send(txtd);
+        sdrTx.send(txtd);
         
-        % Receive the signal from sdrB
-        rxtd = sdrB.recv(nread,nskip,ntimes);
+        % Receive the signal from sdrRx
+        rxtd = sdrRx.recv(nread,nskip,ntimes);
         size(rxtd);
         
-        for txIndex=1:sdrA.nch
+        for txIndex=1:sdrTx.nch
             tos = linspace(-0.5, 0.5, nto);
             for ito = 1:nto
                 to = tos(ito);
@@ -86,8 +86,8 @@ for expType=1:3
                     end
                     
                     rxfd = fft(rxtdShifted);
-                    corrfd = zeros(nFFT, sdrA.nch);
-                    corrtd = zeros(nFFT, sdrA.nch);
+                    corrfd = zeros(nFFT, sdrTx.nch);
+                    corrtd = zeros(nFFT, sdrTx.nch);
                     
                     corrfd(:,txIndex) = txfd(:,txIndex) .* conj(rxfd);
                     corrtd(:,txIndex) = ifft(corrfd(:,txIndex));
@@ -114,7 +114,7 @@ for expType=1:3
     cols = 'yrgb'; % Colors for the plots
     maxPos(1,:,:) = maxPos(1,:,:) - maxPos(1,:,:); % For txIndex=1, everything should be 0
     figure(3);
-    for txIndex=1:sdrA.nch
+    for txIndex=1:sdrTx.nch
         
         % Fractional
         l = maxPos(txIndex, :, :);
@@ -130,7 +130,7 @@ for expType=1:3
             c = sum(exp(1j*2*pi*l));
             c = angle(c);
             c = c /(2*pi);
-            sdrA.calTxDelay(txIndex) = c;
+            sdrTx.calTxDelay(txIndex) = c;
         elseif (expType == 2)
             figure(3);
             subplot(5,1,2);
@@ -168,7 +168,7 @@ for expType=1:3
             ylim([-pi pi]);
             title('Pre-Cal: LO Phase Offsets');
             l = angle(sum(exp(1j*ph)));
-            sdrA.calTxPhase(txIndex) = l;
+            sdrTx.calTxPhase(txIndex) = l;
         elseif (expType == 3)
             subplot(5,1,5);
             ph = wrapToPi(angle(lTx) - angle(lRef));
@@ -180,12 +180,12 @@ for expType=1:3
     end % txIndex
 end % expType
 
-% Stop transmitting and do a dummy read
-txtd = zeros(nFFT, sdrA.nch);
-sdrA.send(txtd);
-sdrB.send(txtd);
-sdrA.recv(nread,nskip,ntimes);
-sdrB.recv(nread,nskip,ntimes);
+% Stop transmitting and do a dummy read on both nodes
+txtd = zeros(nFFT, sdrTx.nch);
+sdrTx.send(txtd);
+sdrRx.send(txtd);
+sdrTx.recv(nread,nskip,ntimes);
+sdrRx.recv(nread,nskip,ntimes);
 
 % Clear workspace variables
 clear constellation expType iter maxPos maxVal nFFT niter rxtd scIndex;
