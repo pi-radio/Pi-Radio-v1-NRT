@@ -4,15 +4,22 @@
 % 56.464 + (400*1.92) = 57.232 GHz. This tone is received by sdrRx on
 % subcarrier -400, since 58000 - (400*1.92) = 57.232 GHz.
 
-sdrTx.lo.configure('../../config/lmx_registers_56.464ghz.txt');
 sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
 
 % Configure the RX number of samples, etc
 nFFT = 1024;    % num of FFT points
 nread = nFFT;   % Number of samples to read
-nskip = nFFT;  % Number of samples to skip
+nskip = nFFT*1;  % Number of samples to skip
 ntimes = 100;    % Number of batches to receive
-scIndex = 400;  % Transmit at +400, receive at -400
+scIndex = 400;  % Transmit at +scIndex, receive at -scIndex
+
+% The offset LO will differ based on which subcarrier we are going to use.
+if (scIndex == 300)
+    sdrTx.lo.configure('../../config/lmx_registers_56.848ghz.txt');
+elseif (scIndex == 400)
+    sdrTx.lo.configure('../../config/lmx_registers_56.464ghz.txt');
+end
+
 
 % Create a single tone at subcarrier +400 and transmit it from one channel
 % on sdrTx
