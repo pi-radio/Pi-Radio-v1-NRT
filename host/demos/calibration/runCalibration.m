@@ -10,10 +10,10 @@ addpath('../../helper');
 isDebug = false;		% print debug messages
 
 sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.50", 'isDebug', isDebug, ...
-    'figNum', 100);
+    'figNum', 100, 'name', 'revB-0007');
 
 sdr1 = piradio.sdr.FullyDigital('ip', "10.1.1.51", 'isDebug', isDebug, ...
-    'figNum', 101);
+    'figNum', 101, 'name', 'revB-0001');
 
 % Read some parameters of the SDR in local variables
 nadc = sdr0.nadc;   % num of A/D converters
@@ -26,20 +26,20 @@ fs = sdr0.fs;       % sample frequency in Hz
 sdr0.fpga.configure('../../config/rfsoc.cfg');
 sdr1.fpga.configure('../../config/rfsoc.cfg');
 
-% Make sure we aren't transmitting anythingsdrB
+% Make sure we aren't transmitting anything
 txtd = zeros(1024, 4);
 sdr0.send(txtd);
 sdr1.send(txtd);
 
 sdr0.rffeTx.powerDown();
 sdr0.rffeRx.powerDown();
-sdr0.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdr0.lo.configureUnique('58ghz');
 sdr0.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr0.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
 sdr1.rffeTx.powerDown();
 sdr1.rffeRx.powerDown();
-sdr1.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdr1.lo.configureUnique('58ghz');
 sdr1.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr1.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
@@ -94,14 +94,14 @@ sdr0 = sdrRx;
 sdr1 = sdrTx;
 clear sdrTx sdrRx;
 
-% Calibrate the RX array on sdr1, using sdr0 as the reference TX
-clc;
-sdrTx = sdr0;
-sdrRx = sdr1;
-calIQrx;
-sdr1 = sdrRx;
-sdr0 = sdrTx;
-clear sdrTx sdrRx;
+% % Calibrate the RX array on sdr1, using sdr0 as the reference TX
+% clc;
+% sdrTx = sdr0;
+% sdrRx = sdr1;
+% calIQrx;
+% sdr1 = sdrRx;
+% sdr0 = sdrTx;
+% clear sdrTx sdrRx;
 
 %% Calibrate the TX-side IQ Imbalances
 

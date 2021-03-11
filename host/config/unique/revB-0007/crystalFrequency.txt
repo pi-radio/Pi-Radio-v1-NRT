@@ -1,0 +1,1 @@
+Measured: 40.000056 MHz

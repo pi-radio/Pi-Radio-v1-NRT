@@ -11,13 +11,13 @@ nFFT = 1024;    % num of FFT points
 nread = nFFT;   % Number of samples to read
 nskip = nFFT*1;  % Number of samples to skip
 ntimes = 100;    % Number of batches to receive
-scIndex = 400;  % Transmit at +scIndex, receive at -scIndex
+scIndex = 300;  % Transmit at +scIndex, receive at -scIndex
 
 % The offset LO will differ based on which subcarrier we are going to use.
 if (scIndex == 300)
-    sdrTx.lo.configure('../../config/lmx_registers_56.848ghz.txt');
+    sdrTx.lo.configureUnique('56.848ghz');
 elseif (scIndex == 400)
-    sdrTx.lo.configure('../../config/lmx_registers_56.464ghz.txt');
+    sdrTx.lo.configureUnique('56.464ghz');
 end
 
 
@@ -36,7 +36,7 @@ rxtd = sdrRx.recv(nread,nskip,ntimes);
 
 % Measure and calibrate the Alpha values
 alphas = zeros(sdrRx.nch, ntimes);
-cols = 'yrgb';
+cols = 'mrgb';
 figure(4); clf;
 
 % Store the underired (i.e, upper) sideband values in here
@@ -58,10 +58,12 @@ for expType = 1:2
             sbs = fd(nFFT/2 + 1 + scIndex) / fd(nFFT/2 + 1 - scIndex);
             sbssAlpha(rxIndex, itimes) = mag2db(abs(sbs));
             
-            re = rms(re);
-            im = rms(im);
+            fd = fftshift(fft(re));
+            absRe = abs(fd(nFFT/2 + 1 - scIndex));
+            fd = fftshift(fft(im));
+            absIm = abs(fd(nFFT/2 + 1 - scIndex));            
             
-            alphas(rxIndex,itimes) = re/im;
+            alphas(rxIndex,itimes) = absRe / absIm;
         end % itimes
 
         if (expType == 1)
@@ -251,4 +253,4 @@ sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
 clear a alphas ans bestvs cols expType fd im iter itimes ivhypo l m nFFT;
 clear niter nread nskip ntimes vnhypo pos re rxIndex rxtd scIndex td tdMod;
 clear txfd txtd usb usbsAlpha  vhypo vhypos bestsbs mp sbs sbssAlpha;
-clear bestusbs nvhypo usbs v val sbssVee vmax;
+clear bestusbs nvhypo usbs v val sbssVee vmax absRe absIm;

@@ -25,6 +25,7 @@ classdef FullyDigital < matlab.System
         isDebug;		% if 'true' print debug messages
         fc = 60e9;      % carrier frequency of the SDR in Hz
         figNum;         % Figure number to plot waveforms for this SDR
+        name;           % Unique name for this transceiver board
         calTxDelay;
         calRxDelay;
         calTxPhase;
@@ -152,6 +153,21 @@ classdef FullyDigital < matlab.System
                 grid on;
             end
         end
+        
+        function blob = applyCalRxIQ(obj, rxtd)
+            blob = zeros(size(rxtd));
+            for rxIndex=1:obj.nch
+                for itimes=1:size(rxtd, 2)
+                    td = rxtd(:, itimes, rxIndex);
+                    re = real(td);
+                    im = imag(td);
+                    im = im * obj.calRxIQa(rxIndex);
+                    v = obj.calRxIQv(rxIndex);
+                    im = re*((-1)*tan(v)) + im/(cos(v));
+                    blob(:,itimes,rxIndex) = td;
+                end % itimes
+            end % rxIndex
+        end % function applyCalRxIQ
         
         % Create some helper functions
         function nch = get.nch(obj)
