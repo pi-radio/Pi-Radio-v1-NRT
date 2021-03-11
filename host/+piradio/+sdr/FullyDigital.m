@@ -60,7 +60,7 @@ classdef FullyDigital < matlab.System
             % Create the RFSoC object
             obj.fpga = piradio.fpga.RFSoC('ip', obj.ip, 'isDebug', obj.isDebug);
             
-            obj.lo = piradio.rffe.LMX2595('socket', obj.socket);
+            obj.lo = piradio.rffe.LMX2595('socket', obj.socket, 'name', obj.name);
             obj.rffeTx = piradio.rffe.HMC6300('socket', obj.socket);
             obj.rffeRx = piradio.rffe.HMC6301('socket', obj.socket);
             

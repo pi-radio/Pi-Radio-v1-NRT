@@ -70,13 +70,13 @@ for expType = 1:6
         for itimes = 1:ntimes
       
             if (expType == 1) || (expType == 6)
-                td = rxtd(:, itimes, refRxIndex); % Use rxIndex 1 as the reference
+                td = rxtd(:, itimes, refRxIndex); % Use refRxIndex as the reference
                 fd = mag2db(abs(fftshift(fft(td))));
                 % "sbs": sideband suppression (unwanted - wanted)
                 sbs = fd(nFFT/2 + 1 - scIndex) - fd(nFFT/2 + 1 + scIndex);
                 sbssAlpha(txIndex, itimes) = sbs;
             elseif (expType == 2) || (expType == 4)
-                td = rxtd(:, itimes, refRxIndex); % Use rxIndex 1 as the reference
+                td = rxtd(:, itimes, refRxIndex); % Use rxIndex refRxIndex as the reference
                 fd = fftshift(fft(td));
                 fdMod = zeros(nFFT, 1);
                 fdMod(nFFT/2 + 1 + scIndex) = fd(nFFT/2 + 1 + scIndex);
@@ -86,7 +86,7 @@ for expType = 1:6
                 magRe = rms(abs(td));
                 magReAlpha(txIndex, itimes) = magRe;
             elseif (expType == 3) || (expType == 5)
-                td = rxtd(:, itimes, refRxIndex); % Use rxIndex 1 as the reference
+                td = rxtd(:, itimes, refRxIndex); % Use rxIndex refRxIndex as the reference
                 fd = fftshift(fft(td));
                 fdMod = zeros(nFFT, 1);
                 fdMod(nFFT/2 + 1 + scIndex) = fd(nFFT/2 + 1 + scIndex);

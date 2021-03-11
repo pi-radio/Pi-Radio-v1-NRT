@@ -8,11 +8,11 @@ addpath('../../');
 isDebug = true;		% print debug messages
 
 %% Create two Fully Digital SDRs (sdr0 and sdr1)
-sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.43", 'isDebug', isDebug, ...
-    'figNum', 100);
+sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.50", 'isDebug', isDebug, ...
+    'figNum', 100, 'name', 'revB-0007');
 
-sdr1 = piradio.sdr.FullyDigital('ip', "10.1.1.44", 'isDebug', isDebug, ...
-    'figNum', 101);
+sdr1 = piradio.sdr.FullyDigital('ip', "10.1.1.51", 'isDebug', isDebug, ...
+    'figNum', 101, 'name', 'revB-0001');
 
 % Configure the RFSoC
 sdr0.fpga.configure('../../config/rfsoc.cfg');
@@ -63,7 +63,7 @@ sdrRX = sdr1;
 %% Create time-domain samples and send them to the DACs
 clc;
 nFFT = 1024;	% number of samples to generate for each DAC
-scToUse = 25;   % select a subcarrier to generate data for each DAC
+scToUse = 400;   % select a subcarrier to generate data for each DAC
 
 % Initialize the TX data. Each TX channel sends a different tone
 txtd = zeros(nFFT, nch);
@@ -89,10 +89,10 @@ sdrTX.send(txtd);
 
 nFFT = 1024;	% num of FFT points
 nskip = 1024;	% skip ADC data for 1024 cc
-nbatch = 1024;	% num of batches
+ntimes = 200;	% num of batches
 
 % Finally, call the `recv` method
-rxtd = sdrRX.recv(nFFT, nskip, nbatch);
+rxtd = sdrRX.recv(nFFT, nskip, ntimes);
 
 %% Close the TCP Connections and clear the Workspace variables
 clear sdr0 sdr1;
