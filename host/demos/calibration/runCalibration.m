@@ -30,16 +30,17 @@ sdr1.fpga.configure('../../config/rfsoc.cfg');
 txtd = zeros(1024, 4);
 sdr0.send(txtd);
 sdr1.send(txtd);
+clear txtd;
 
 sdr0.rffeTx.powerDown();
 sdr0.rffeRx.powerDown();
-sdr0.lo.configureUnique('58ghz');
+sdr0.lo.configure('../../config/lmx_registers_58ghz.txt');
 sdr0.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr0.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
 sdr1.rffeTx.powerDown();
 sdr1.rffeRx.powerDown();
-sdr1.lo.configureUnique('58ghz');
+sdr1.lo.configure('../../config/lmx_registers_58ghz.txt');
 sdr1.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr1.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
@@ -85,20 +86,20 @@ clear sdrTx sdrRx;
 
 %% Calibrate the RX-side IQ Imbalances
 
-% % Calibrate the RX array on sdr0, using sdr1 as the reference TX
-% clc;
-% sdrTx = sdr1;
-% sdrRx = sdr0;
-% calIQrx_v2;
-% sdr0 = sdrRx;
-% sdr1 = sdrTx;
-% clear sdrTx sdrRx;
+% Calibrate the RX array on sdr0, using sdr1 as the reference TX
+clc;
+sdrTx = sdr1;
+sdrRx = sdr0;
+calIQrx;
+sdr0 = sdrRx;
+sdr1 = sdrTx;
+clear sdrTx sdrRx;
 
 % Calibrate the RX array on sdr1, using sdr0 as the reference TX
 clc;
 sdrTx = sdr0;
 sdrRx = sdr1;
-calIQrx_v2;
+calIQrx;
 sdr1 = sdrRx;
 sdr0 = sdrTx;
 clear sdrTx sdrRx;

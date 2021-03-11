@@ -4,24 +4,24 @@
 % 56.464 + (400*1.92) = 57.232 GHz. This tone is received by sdrRx on
 % subcarrier -400, since 58000 - (400*1.92) = 57.232 GHz.
 
-sdrRx.lo.configureUnique('58ghz');
+sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
 
 % Configure the RX number of samples, etc
 nFFT = 1024;    % num of FFT points
 nread = nFFT;   % Number of samples to read
 nskip = nFFT*1;  % Number of samples to skip
 ntimes = 100;    % Number of batches to receive
-scIndex = 400;  % Transmit at +scIndex, receive at -scIndex
+scIndex = 300;  % Transmit at +scIndex, receive at -scIndex
 
 % The offset LO will differ based on which subcarrier we are going to use,
 % and what the FFT size is. Below are a few examples that you can play
 % around with.
 if (nFFT == 1024) && (scIndex == 300)
-    sdrTx.lo.configureUnique('56.848ghz');
+    sdrTx.lo.configure('../../config/lmx_registers_56.848ghz.txt');
 elseif (nFFT == 1024) && (scIndex == 400)
-    sdrTx.lo.configureUnique('56.464ghz');
+    sdrTx.lo.configure('../../config/lmx_registers_56.464ghz.txt');
 elseif (nFFT == 512) && (scIndex == 200)
-    sdrTx.lo.configureUnique('56.464ghz');
+    sdrTx.lo.configure('../../config/lmx_registers_56.464ghz.txt');
 else
     fprintf('Error. Consiguration not supported');
 end
@@ -129,7 +129,7 @@ for expType = 1:2
         end 
     end % if expType is 1 or 2 (plotting and saving cal factors)
     
-end % expType
+end % for expType
 
 % % Used only for debug
 % figure(1); clf;
@@ -156,8 +156,8 @@ sdrTx.recv(nread,nskip,ntimes);
 sdrRx.recv(nread,nskip,ntimes);
 
 % Clear the workspace variables, and make sure both nodes revert to 58 GHz
-sdrTx.lo.configureUnique('58ghz');
-sdrRx.lo.configureUnique('58ghz');
+sdrTx.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
 
 clear a ahypos aMinIndex ans cumulativeSBS expType fd iahypo im imOld;
 clear itimes ivhypo m minimum nahypo nFFT nread nskip ntimes nvhypo;

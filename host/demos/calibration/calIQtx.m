@@ -5,8 +5,8 @@
 % one at a time). Measure the received power on a reference RX channel. All
 % four TX channels are active, each transmitting a unique tone.
 
-% sdrTx.lo.configure('../../config/lmx_registers_58ghz.txt');
-% sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdrTx.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
 
 % Configure the RX number of samples, etc
 nFFT = 1024;        % num of FFT points
@@ -126,6 +126,11 @@ for expType = 1:6
             xlabel('itimes'); ylabel('Measured Alpha');
             hold on; grid on; ylim([0 2]);
         elseif (expType == 6)
+            subplot(4,1,4);
+            plot(sbssAlpha(txIndex,:), cols(txIndex));
+            title('After TX-side IQ Alpha Cal');
+            xlabel('itimes'); ylabel('Sideband Suppression (dB)');
+            hold on; grid on; ylim([-50 0]);
         end
         
     end % txIndex
