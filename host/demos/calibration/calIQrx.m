@@ -39,8 +39,8 @@ sdrTx.send(txtd);
 
 % Receive on sdrRx
 rxtd = sdrRx.recv(nread,nskip,ntimes);
-nahypo = 101;
-nvhypo = 201;
+nahypo = 51;
+nvhypo = 101;
 ahypos = linspace(0,2,nahypo);
 vhypos = linspace(-1,1,nvhypo);
 sbsStore = zeros(sdrRx.nch, ntimes, nahypo, nvhypo); % Used only for debug
@@ -92,7 +92,7 @@ for expType = 1:2
     
     if (expType == 1)
         
-        figure(1); clf;
+        figure(3); clf;
         for rxIndex = 1:sdrRx.nch
             % Plot the uncalibrated SBS as a function of itimes
             subplot(3,4,rxIndex);

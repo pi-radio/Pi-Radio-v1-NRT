@@ -159,15 +159,32 @@ classdef FullyDigital < matlab.System
             for rxIndex=1:obj.nch
                 for itimes=1:size(rxtd, 2)
                     td = rxtd(:, itimes, rxIndex);
-                    re = real(td);
-                    im = imag(td);
-                    im = im * obj.calRxIQa(rxIndex);
-                    v = obj.calRxIQv(rxIndex);
-                    im = re*((-1)*tan(v)) + im/(cos(v));
+                    reOld = real(td);
+                    imOld = imag(td);
+                    a = obj.calRxIQa(rxIndex);
+                    v = obj.calRxIQv(rxIndex);                    
+                    re = reOld/a;
+                    im =  (-1)*(tan(v))*reOld/a + imOld/(cos(v));
+                    td = re + 1j*im;
                     blob(:,itimes,rxIndex) = td;
                 end % itimes
             end % rxIndex
         end % function applyCalRxIQ
+        
+        function blob = applyCalTxIQ(obj, txtd)
+            blob = zeros(size(txtd));
+            for txIndex=1:obj.nch
+                td = txtd(:,txIndex);
+                reOld = real(td);
+                imOld = imag(td);
+                a = obj.calTxIQa(txIndex);
+                v = obj.calTxIQv(txIndex);                    
+                re = reOld/a;
+                im =  (-1)*(tan(v))*reOld/a + imOld/(cos(v));
+                td = re + 1j*im;
+                blob(:,txIndex) = td;                    
+            end % txIndex
+        end % function applyCalTxIQ
         
         % Create some helper functions
         function nch = get.nch(obj)

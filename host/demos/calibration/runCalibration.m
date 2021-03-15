@@ -9,10 +9,10 @@ addpath('../../');
 addpath('../../helper');
 isDebug = false;		% print debug messages
 
-sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.50", 'isDebug', isDebug, ...
+sdr0 = piradio.sdr.FullyDigital('ip', "192.168.1.50", 'isDebug', isDebug, ...
     'figNum', 100, 'name', 'revB-0007');
 
-sdr1 = piradio.sdr.FullyDigital('ip', "10.1.1.51", 'isDebug', isDebug, ...
+sdr1 = piradio.sdr.FullyDigital('ip', "192.168.1.51", 'isDebug', isDebug, ...
     'figNum', 101, 'name', 'revB-0001');
 
 % Read some parameters of the SDR in local variables
@@ -113,6 +113,15 @@ sdrRx = sdr1;
 calIQtx;
 sdr1 = sdrRx;
 sdr0 = sdrTx;
+clear sdrTx sdrRx;
+
+% Calibrate the TX array on sdr1, using sdr0 as the reference RX
+clc;
+sdrTx = sdr1;
+sdrRx = sdr0;
+calIQtx;
+sdr0 = sdrRx;
+sdr1 = sdrTx;
 clear sdrTx sdrRx;
 
 %% Clear workspace variables
