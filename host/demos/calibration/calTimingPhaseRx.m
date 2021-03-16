@@ -5,7 +5,7 @@
 nFFT = 1024;    % num of FFT points
 nread = nFFT;   % Number of samples to read
 nskip = 768*4;  % Number of samples to skip
-ntimes = 20;    % Number of batches to receive
+ntimes = 30;    % Number of batches to receive
 
 % Generate the TX waveform
 scMin = -450;
@@ -97,7 +97,7 @@ for expType = 1:3
     end % iter
     
     % Calculate the fractional and integer timing offsets
-    cols = 'yrgb'; % Colors for the plots
+    cols = 'mrgb'; % Colors for the plots
     %maxPos(1,:,:) = maxPos(1,:,:) - maxPos(1,:,:); % For rxIndex=1, everything should be 0
     figure(3);
     for rxIndex=1:sdrRx.nch
@@ -138,7 +138,7 @@ for expType = 1:3
             plot(l, cols(rxIndex));
             title('Post-Cal: Integer Timing Offsets');
             hold on;
-            ylim([-2 2]);
+            %ylim([-2 2]);
             xlabel('Iteration (sorted). Consider only the middle (median) iteration. Should be 0.');
         end
         

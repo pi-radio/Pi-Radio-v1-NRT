@@ -7,7 +7,7 @@
 % Add the folder containing +piradio to the MATLAB path.
 addpath('../../');
 addpath('../../helper');
-isDebug = false;		% print debug messages
+isDebug = true;		% print debug messages
 
 sdr0 = piradio.sdr.FullyDigital('ip', "192.168.1.50", 'isDebug', isDebug, ...
     'figNum', 100, 'name', 'revB-0007');
@@ -67,7 +67,6 @@ clear sdrTx sdrRx;
 %% Calibrate the timing and phase offsets on the RX side
 
 % Calibrate the RX array on sdr0, using sdr1 as the reference TX
-clc;
 sdrTx = sdr1;
 sdrRx = sdr0;
 calTimingPhaseRx;
@@ -75,14 +74,14 @@ sdr0 = sdrRx;
 sdr1 = sdrTx;
 clear sdrTx sdrRx;
 
-% Calibrate the RX array on sdr1, using sdr0 as the reference TX
-clc;
-sdrTx = sdr0;
-sdrRx = sdr1;
-calTimingPhaseRx;
-sdr1 = sdrRx;
-sdr0 = sdrTx;
-clear sdrTx sdrRx;
+% % Calibrate the RX array on sdr1, using sdr0 as the reference TX
+% clc;
+% sdrTx = sdr0;
+% sdrRx = sdr1;
+% calTimingPhaseRx;
+% sdr1 = sdrRx;
+% sdr0 = sdrTx;
+% clear sdrTx sdrRx;
 
 %% Calibrate the RX-side IQ Imbalances
 
@@ -91,7 +90,7 @@ clc;
 sdrTx = sdr1;
 sdrRx = sdr0;
 calIQrx;
-sdr0 = sdrRx;
+sdr0 = sdrRx
 sdr1 = sdrTx;
 clear sdrTx sdrRx;
 

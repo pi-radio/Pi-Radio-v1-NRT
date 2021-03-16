@@ -154,6 +154,18 @@ classdef FullyDigital < matlab.System
             end
         end
         
+        function blob = applyCalRxArray(obj, rxtd)
+            blob = zeros(size(rxtd));
+            for rxIndex=1:obj.nch
+                for itimes=1:size(rxtd, 2)
+                    td = rxtd(:, itimes, rxIndex);
+                    td = obj.fracDelay(td, obj.calRxDelay(rxIndex), size(td, 1));
+                    td = td * exp(1j * obj.calRxPhase(rxIndex));
+                    blob(:, itimes, rxIndex) = td;
+                end % itimes
+            end % rxIndex
+        end % function applyCalRxArray
+        
         function blob = applyCalRxIQ(obj, rxtd)
             blob = zeros(size(rxtd));
             for rxIndex=1:obj.nch
@@ -206,7 +218,21 @@ classdef FullyDigital < matlab.System
             % Return the FPGA sample rate
             fs = obj.fpga.fs;
         end
-    end
+        
+        function opBlob = fracDelay(obj, ipBlob,fracDelayVal,N)
+            taps = zeros(0,0);
+            for index=-100:100
+                delay = index + fracDelayVal;
+                taps = [taps sinc(delay)];
+            end
+            x = [ipBlob; ipBlob];
+            x = x';
+            y = conv(taps, x);
+            opBlob = y(N/2 : N/2 + N - 1);
+            opBlob = opBlob';
+        end % fracDelay
+
+    end % methods
     
     methods (Access = 'protected')
         function connect(obj)
