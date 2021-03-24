@@ -23,70 +23,81 @@ elseif (nFFT == 1024) && (scIndex == 400)
 elseif (nFFT == 512) && (scIndex == 200)
     sdrTx.lo.configure('../../config/lmx_registers_56.464ghz.txt');
 else
-    fprintf('Error. Consiguration not supported');
+    fprintf('Error. Configuration not supported');
 end
 
 
 % Create a single tone at subcarrier +400 and transmit it from one channel
 % on sdrTx
+refTxIndex = 2;
 txfd = zeros(nFFT, 1);
 txtd = zeros(nFFT, sdrTx.nch);
 txfd(nFFT/2 + 1 + scIndex) = 1+0i;
-txtd(:,1) = ifft(fftshift(txfd));
-m = max(abs(txtd(:,1)));
+txtd(:,refTxIndex) = ifft(fftshift(txfd));
+m = max(abs(txtd(:,refTxIndex)));
 txtd = txtd/m*15000;
 sdrTx.send(txtd);
+pause(0.1);
 
 % Receive on sdrRx
 rxtd = sdrRx.recv(nread,nskip,ntimes);
-nahypo = 51;
-nvhypo = 101;
-ahypos = linspace(0,2,nahypo);
+%rxtd = sdrRx.applyCalDelayADC(rxtd);
+pause(0.1);
+nvhypo = 51;
 vhypos = linspace(-1,1,nvhypo);
-sbsStore = zeros(sdrRx.nch, ntimes, nahypo, nvhypo); % Used only for debug
+sbsStore = zeros(sdrRx.nch, ntimes, nvhypo); % Used only for debug
 sbsLog = zeros(sdrRx.nch, ntimes); % Stores the SBS to compare before and after calibration
 
+% First, estimate Alpha
+for rxIndex=1:sdrRx.nch
+    sumRe = 0;
+    sumIm = 0;
+    for itimes=1:ntimes
+        td = rxtd(:,itimes,rxIndex);
+        sumRe = sumRe + rms(real(td));
+        sumIm = sumIm + rms(imag(td));
+    end % itimes
+    sdrRx.calRxIQa(rxIndex) = sumRe / sumIm;
+end %rxIndex
+
 for expType = 1:2
-    expType
-    cumulativeSBS = zeros(sdrRx.nch, nahypo, nvhypo);
+    cumulativeUSB = zeros(sdrRx.nch, nvhypo);
+    cumulativeLSB = zeros(sdrRx.nch, nvhypo);
     for rxIndex = 1:sdrRx.nch
-        rxIndex
         for itimes=1:ntimes
-            for iahypo = 1:nahypo
-                for ivhypo = 1:nvhypo
-                    
-                    if (expType == 2) && (iahypo ~= (int16(nahypo/2))) && (ivhypo ~= int16(nvhypo/2))
-                        continue;
-                    end
-                    td = rxtd(:,itimes,rxIndex);
-                    reOld = real(td);
-                    imOld = imag(td);
-                    a = ahypos(iahypo);
-                    v = vhypos(ivhypo);
-                    
-                    if (expType == 2)
-                        a = a * sdrRx.calRxIQa(rxIndex);
-                        v = v + sdrRx.calRxIQv(rxIndex);
-                    end
-                    
-                    re = (1/a)*reOld;
-                    im = reOld*(-1*tan(v)/a) + imOld*(1/cos(v));
-                    tdMod = re + 1j*im;
-                    fd = fftshift(fft(tdMod));
-                    % "sbs" stands for sideband suppression. This is the
-                    % undesired sideband power divided by that of the desired
-                    % sideband
-                    sbs = fd(nFFT/2 + 1 + scIndex) / fd(nFFT/2 + 1 - scIndex);
-                    sbs = abs(sbs);
-                    sbsStore(rxIndex, itimes, iahypo, ivhypo) = mag2db(sbs); % Used only for debug
-                    cumulativeSBS(rxIndex, iahypo, ivhypo)  = cumulativeSBS(rxIndex, iahypo, ivhypo) + sbs;
-                    
-                    if (iahypo == (int16(nahypo/2))) && (ivhypo == int16(nvhypo/2))
-                        sbsLog(rxIndex, itimes) = mag2db(sbs);
-                    end
-                    
-                end % ivhypo
-            end % iahypo
+            for ivhypo = 1:nvhypo
+
+                if (expType == 2) && (ivhypo ~= int16(nvhypo/2))
+                    continue;
+                end
+                td = rxtd(:,itimes,rxIndex);
+                reOld = real(td);
+                imOld = imag(td);
+                v = vhypos(ivhypo);
+                a = sdrRx.calRxIQa(rxIndex);
+
+                if (expType == 2)
+                    v = v + sdrRx.calRxIQv(rxIndex);
+                end
+
+                re = (1/a)*reOld;
+                im = reOld*(-1*tan(v)/a) + imOld*(1/cos(v));
+                tdMod = re + 1j*im;
+                fd = fftshift(fft(tdMod));
+                % "sbs" stands for sideband suppression. This is the
+                % undesired sideband power divided by that of the desired
+                % sideband
+                sbs = fd(nFFT/2 + 1 + scIndex) / fd(nFFT/2 + 1 - scIndex);
+                sbs = abs(sbs);
+                sbsStore(rxIndex, itimes, ivhypo) = mag2db(sbs); % Used only for debug
+                cumulativeUSB(rxIndex, ivhypo)  = cumulativeUSB(rxIndex, ivhypo) + abs(fd(nFFT/2 + 1 + scIndex));
+                cumulativeLSB(rxIndex, ivhypo)  = cumulativeLSB(rxIndex, ivhypo) + abs(fd(nFFT/2 + 1 - scIndex));
+
+                if (ivhypo == int16(nvhypo/2))
+                    sbsLog(rxIndex, itimes) = mag2db(sbs);
+                end
+
+            end % ivhypo            
         end % itimes
     end % rxIndex
     
@@ -102,20 +113,12 @@ for expType = 1:2
             ylim([-40 0]); grid on;
             
             subplot(3,4,rxIndex+4);
-            m = cumulativeSBS(rxIndex,:,:);
-            m = reshape(m, nahypo, nvhypo);
+            m = cumulativeUSB(rxIndex,:) ./cumulativeLSB(rxIndex,:);
             m = mag2db(m);
-            [x,y] = meshgrid(vhypos, ahypos);
-            surf(x, y, m); view(2); shading interp;
-            xlabel('V Hypotheses'); ylabel('A Hypotheses');
-                                    
-            % Find the Cal factors and save it to the sdr
-            minimum = min(min(m));
-            [aMinIndex,vMinIndex] = find(m==minimum);
-            sdrRx.calRxIQa(rxIndex) = ahypos(aMinIndex);
-            sdrRx.calRxIQv(rxIndex) = vhypos(vMinIndex);
-            s = sprintf('V: %2.2f, Alpha: %2.2f', vhypos(vMinIndex), ahypos(aMinIndex));
-            title(s);
+            [~, pos] = min(m);
+            sdrRx.calRxIQv(rxIndex) = vhypos(pos);
+            plot(vhypos, m); grid on;
+            xlabel('V Hypotheses'); ylabel('Sideband Suppression');
         end        
         
     elseif (expType == 2)
@@ -131,23 +134,6 @@ for expType = 1:2
     
 end % for expType
 
-% % Used only for debug
-% figure(1); clf;
-% for rxIndex = 1:sdrRx.nch
-%     subplot(2,2,rxIndex);
-%     for itimes=1:ntimes
-%         m = sbsStore(rxIndex,itimes,:,:);
-%         m = reshape(m, nahypo, nvhypo);
-%         surf(m); hold on;
-%         view([0,270]); colorbar;
-%         grid on; shading interp;
-%         xlabel('V Hypotheses');
-%         ylabel('Alpha Hypotheses');
-%         colorbar;
-%     end
-% end
-
-
 % Stop transmitting and do a dummy read on both nodes
 txtd = zeros(nFFT, sdrTx.nch);
 sdrTx.send(txtd);
@@ -162,4 +148,5 @@ sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
 clear a ahypos aMinIndex ans cumulativeSBS expType fd iahypo im imOld;
 clear itimes ivhypo m minimum nahypo nFFT nread nskip ntimes nvhypo;
 clear re reOld rxIndex rxtd sbs sbsLog sbsStore scIndex td tdMod txfd;
-clear txtd v vhypos vMinIndex x y s;
+clear txtd v vhypos vMinIndex x y s refTxIndex;
+clear cumulativeUSB  cumulativeLSB sumRe sumIm;

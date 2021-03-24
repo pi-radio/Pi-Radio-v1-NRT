@@ -8,10 +8,10 @@ addpath('../../');
 isDebug = true;		% print debug messages
 
 %% Create two Fully Digital SDRs (sdr0 and sdr1)
-sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.50", 'isDebug', isDebug, ...
+sdr0 = piradio.sdr.FullyDigital('ip', "192.168.1.50", 'isDebug', isDebug, ...
     'figNum', 100, 'name', 'revB-0007');
 
-sdr1 = piradio.sdr.FullyDigital('ip', "10.1.1.51", 'isDebug', isDebug, ...
+sdr1 = piradio.sdr.FullyDigital('ip', "192.168.1.51", 'isDebug', isDebug, ...
     'figNum', 101, 'name', 'revB-0001');
 
 % Configure the RFSoC
@@ -42,17 +42,9 @@ sdr1.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr0.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 sdr1.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
-% Read some parameters of the SDR and save them in local variables
-nadc = sdr0.nadc;   % num of A/D converters
-ndac = sdr0.ndac;   % num of D/A converters
-nch = sdr0.nch;     % num of channels
-fs = sdr0.fs;       % sample frequency in Hz
-                    % (pre-interpolation at the TX)
-                    % (post-decimation at the RX)
-
 % Make sure that the nodes are silent (not transmitting)
 nFFT = 1024;
-txtd = zeros(nFFT, nch);
+txtd = zeros(nFFT, sdr0.nch);
 sdr0.send(txtd);
 sdr1.send(txtd);
 
@@ -66,7 +58,7 @@ nFFT = 1024;	% number of samples to generate for each DAC
 scToUse = 400;   % select a subcarrier to generate data for each DAC
 
 % Initialize the TX data. Each TX channel sends a different tone
-txtd = zeros(nFFT, nch);
+txtd = zeros(nFFT, sdrTX.nch);
 for ich = 1:1
 	txfd = zeros(nFFT,1);
    	txfd(nFFT/2 + 1 + scToUse) = 1;

@@ -7,22 +7,25 @@
 sdrTx = sdr0;
 sdrRx = sdr1;
 
-% Transmit a single tone from one channel on the TX. On the RX, capture
+% Transmit a wideband signal from one channel on the TX. On the RX, capture
 % samples, and apply the calibrations. Then, apply BF vectors for a set of
 % AoA values. Plot them out.
 
 nFFT = 1024;
 nread = nFFT;
-nskip = nFFT*1;
-ntimes = 50;
+nskip = nFFT*101;
+ntimes = 100;
 txfd = zeros(nFFT, 1);
+constellation = [1+1j 1-1j -1+1j -1-1j];
 
-scIndex = 50;
-txfd(nFFT/2 + 1 + scIndex) = 1+0i;
+scMin = -450; scMax = 450;
+for scIndex = scMin:scMax
+    txfd(nFFT/2 + 1 + scIndex) = constellation(randi(4));
+end
 txfd = fftshift(txfd);
 txtd = ifft(txfd);
 m = max(abs(txtd));
-txtd = txtd / m * 5000;
+txtd = txtd / m * 15000;
 refTxIndex = 1;
 txtdMod = zeros(nFFT, sdrTx.nch);
 txtdMod(:, refTxIndex) = txtd;
@@ -31,7 +34,7 @@ sdrTx.send(txtdMod);
 rxtd = sdrRx.recv(nread, nskip, ntimes);
 rxtd = sdrRx.applyCalRxArray(rxtd);
 
-naoa = 201;
+naoa = 101;
 aoas = linspace(-1, 1, naoa);
 pArray = zeros(1, naoa);
 
@@ -45,7 +48,7 @@ for iaoa = 1:naoa
             tdbf = tdbf + td * exp(1j*rxIndex*pi*sin(aoa)); % Apply BF Vec
         end % rxIndex
         fd = fftshift(fft(tdbf));
-        p = p + abs(fd(nFFT/2 + 1 + scIndex));
+        p = p + sum(abs(fd( nFFT/2 + 1 + scMin : nFFT/2 + 1 + scMax)));
     end %itimes
     pArray(iaoa) = p;
 end % iaoa
@@ -57,6 +60,7 @@ plot(rad2deg(aoas), mag2db(pArray));
 xlabel('Angle of Arrival (Deg)');
 ylabel('Power (dB)');
 grid on; grid minor;
+ylim([-15 0])
 
 % Stop transmitting and do a dummy read
 txtd = zeros(nFFT, sdrTx.nch);
@@ -65,5 +69,5 @@ sdrRx.recv(nread, nskip, ntimes);
 
 % Clear workspace variables
 clear aoa aoas fd iaoa naoa p pArray refTxIndex td tdbf txtdMod;
-clear sdrTx sdrRx ans itimes m nFFT nRead nskip ntimes rxIndex rxtd;
-clear scIndex txfd txtd;
+clear sdrTx sdrRx ans itimes m nFFT nread nskip ntimes rxIndex rxtd;
+clear scIndex txfd txtd constellation scMax scMin;

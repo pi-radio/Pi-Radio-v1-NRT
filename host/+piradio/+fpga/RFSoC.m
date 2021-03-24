@@ -123,6 +123,8 @@ classdef RFSoC < matlab.System
             rxtd(:,4) = data(:,5) - 1j*data(:,7);
         end
         
+
+        
         function send(obj, txtd)
             % First, we need to process the data from the DACs. The
             % expected input to this function is a matrix with dimension
