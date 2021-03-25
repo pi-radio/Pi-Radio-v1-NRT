@@ -11,7 +11,7 @@ nFFT = 1024;    % num of FFT points
 nread = nFFT;   % Number of samples to read
 nskip = nFFT*1;  % Number of samples to skip
 ntimes = 100;    % Number of batches to receive
-scIndex = 300;  % Transmit at +scIndex, receive at -scIndex
+scIndex = 400;  % Transmit at +scIndex, receive at -scIndex
 
 % The offset LO will differ based on which subcarrier we are going to use,
 % and what the FFT size is. Below are a few examples that you can play
@@ -43,10 +43,9 @@ pause(0.1);
 rxtd = sdrRx.recv(nread,nskip,ntimes);
 %rxtd = sdrRx.applyCalDelayADC(rxtd);
 pause(0.1);
-nvhypo = 51;
+nvhypo = 101;
 vhypos = linspace(-1,1,nvhypo);
-sbsStore = zeros(sdrRx.nch, ntimes, nvhypo); % Used only for debug
-sbsLog = zeros(sdrRx.nch, ntimes); % Stores the SBS to compare before and after calibration
+sbsLog   = zeros(sdrTx.nch, sdrRx.nch, ntimes); % Stores the SBS to compare before and after calibration
 
 % First, estimate Alpha
 for rxIndex=1:sdrRx.nch
@@ -60,77 +59,117 @@ for rxIndex=1:sdrRx.nch
     sdrRx.calRxIQa(rxIndex) = sumRe / sumIm;
 end %rxIndex
 
-for expType = 1:2
-    cumulativeUSB = zeros(sdrRx.nch, nvhypo);
-    cumulativeLSB = zeros(sdrRx.nch, nvhypo);
-    for rxIndex = 1:sdrRx.nch
-        for itimes=1:ntimes
-            for ivhypo = 1:nvhypo
+% expType = 1: Plot the SBS, without any corrections (red)
+% expType = 2: Apply alpha. Plot the SBS. Search for best "v" (blue)
+% expType = 3: Apply alpha and v. Plot the SBS.
 
-                if (expType == 2) && (ivhypo ~= int16(nvhypo/2))
-                    continue;
-                end
-                td = rxtd(:,itimes,rxIndex);
-                reOld = real(td);
-                imOld = imag(td);
-                v = vhypos(ivhypo);
-                a = sdrRx.calRxIQa(rxIndex);
-
-                if (expType == 2)
-                    v = v + sdrRx.calRxIQv(rxIndex);
-                end
-
-                re = (1/a)*reOld;
-                im = reOld*(-1*tan(v)/a) + imOld*(1/cos(v));
-                tdMod = re + 1j*im;
-                fd = fftshift(fft(tdMod));
-                % "sbs" stands for sideband suppression. This is the
-                % undesired sideband power divided by that of the desired
-                % sideband
-                sbs = fd(nFFT/2 + 1 + scIndex) / fd(nFFT/2 + 1 - scIndex);
-                sbs = abs(sbs);
-                sbsStore(rxIndex, itimes, ivhypo) = mag2db(sbs); % Used only for debug
-                cumulativeUSB(rxIndex, ivhypo)  = cumulativeUSB(rxIndex, ivhypo) + abs(fd(nFFT/2 + 1 + scIndex));
-                cumulativeLSB(rxIndex, ivhypo)  = cumulativeLSB(rxIndex, ivhypo) + abs(fd(nFFT/2 + 1 - scIndex));
-
-                if (ivhypo == int16(nvhypo/2))
-                    sbsLog(rxIndex, itimes) = mag2db(sbs);
-                end
-
-            end % ivhypo            
-        end % itimes
-    end % rxIndex
+figure(3); clf;
+for expType = 1:3
+    cumulativeSBS = zeros(sdrTx.nch, sdrRx.nch, nvhypo);
     
-    if (expType == 1)
+    for txIndex = 1:sdrTx.nch
         
-        figure(3); clf;
+        txfd = zeros(nFFT, 1);
+        txtd = zeros(nFFT, sdrTx.nch);
+        txfd(nFFT/2 + 1 + scIndex) = 1+0i;
+        txtd(:,txIndex) = ifft(fftshift(txfd));
+        m = max(abs(txtd(:,txIndex)));
+        txtd = txtd/m*15000;
+        sdrTx.send(txtd);
+        pause(0.05);
+        rxtd = sdrRx.recv(nread,nskip,ntimes);
+        pause(0.05);
+
         for rxIndex = 1:sdrRx.nch
-            % Plot the uncalibrated SBS as a function of itimes
-            subplot(3,4,rxIndex);
-            plot(sbsLog(rxIndex,:));
-            title('Pre-Cal RX-side IQ: Sideband Supp');
-            xlabel('itimes'); ylabel('Suppression (dB)');
-            ylim([-40 0]); grid on;
+            for itimes=1:ntimes
+                for ivhypo = 1:nvhypo
+
+                    if (expType ~= 2) && (ivhypo ~= int16(nvhypo/2))
+                        continue;
+                    end
+                    
+                    td = rxtd(:,itimes,rxIndex);
+                    reOld = real(td);
+                    imOld = imag(td);
+                    v = vhypos(ivhypo);
+                    
+                    if (expType == 1)
+                        a = 1;
+                    else
+                        a = sdrRx.calRxIQa(rxIndex);
+                    end
+                    
+                    if (expType == 3)
+                        v = v + sdrRx.calRxIQv(rxIndex);
+                    end
+
+                    re = (1/a)*reOld;
+                    im = reOld*(-1*tan(v)/a) + imOld*(1/cos(v));
+                    tdMod = re + 1j*im;
+                    fd = fftshift(fft(tdMod));
+                    % "sbs" stands for sideband suppression. This is the
+                    % undesired sideband power divided by that of the desired
+                    % sideband
+                    sbs = fd(nFFT/2 + 1 + scIndex) / fd(nFFT/2 + 1 - scIndex);
+                    sbs = abs(sbs);
+                    cumulativeSBS(txIndex, rxIndex, ivhypo)  = cumulativeSBS(txIndex, rxIndex, ivhypo) + sbs;
+                    if (ivhypo == int16(nvhypo/2))
+                        sbsLog(txIndex, rxIndex, itimes) = sbs;
+                    end
+
+                end % ivhypo            
+            end % itimes
+        end % rxIndex
+    end %sdrTx
+    
+    figure(3);
+    cols = 'rbg';
+    for rxIndex = 1:sdrRx.nch
+        bestSBS = 0;
+        for txIndex = 1:sdrTx.nch
+            a = sbsLog(txIndex, rxIndex, :);
+            a = reshape(a, 1, []);
+            a = max(a);
+            if (a < bestSBS)
+                bestSBS = a;
+                refTxIndex = txIndex;
+            end
+        end
+
+        % Plot the SBS as a function of itimes
+        subplot(2,4,rxIndex);
+        l = sbsLog(refTxIndex, rxIndex, :);
+        l = reshape(l, 1, []);
+        plot(mag2db(l), cols(expType)); hold on;
+        title('RX-side IQ: Sideband Supp');
+        xlabel('itimes'); ylabel('Suppression (dB)');
+        ylim([-40 0]); grid on;
+    end % rxIndex
+          
+    if (expType == 2)
+        for rxIndex = 1:sdrRx.nch
+            bestSBS = 0;
+            for txIndex = 1:sdrTx.nch
+                a = sbsLog(txIndex, rxIndex, :);
+                a = reshape(a, 1, []);
+                a = max(a);
+                if (a < bestSBS)
+                    bestSBS = a;
+                    refTxIndex = txIndex;
+                end
+            end
             
-            subplot(3,4,rxIndex+4);
-            m = cumulativeUSB(rxIndex,:) ./cumulativeLSB(rxIndex,:);
+            subplot(2,4,rxIndex+4);
+            m = cumulativeSBS(refTxIndex, rxIndex,:);
+            m = reshape(m, 1, []);
+            m = m / min(m);
             m = mag2db(m);
             [~, pos] = min(m);
             sdrRx.calRxIQv(rxIndex) = vhypos(pos);
             plot(vhypos, m); grid on;
             xlabel('V Hypotheses'); ylabel('Sideband Suppression');
-        end        
-        
-    elseif (expType == 2)
-        for rxIndex = 1:sdrRx.nch
-            % Plot the calibrated SBS as a function of itimes
-            subplot(3,4,rxIndex+8);
-            plot(sbsLog(rxIndex,:));
-            title('Post-Cal RX-side IQ: Sideband Supp');
-            xlabel('itimes'); ylabel('Suppression (dB)');
-            ylim([-40 0]); grid on;
-        end 
-    end % if expType is 1 or 2 (plotting and saving cal factors)
+        end % rxIndex    
+    end % if expType is 1, 2, or 3 (plotting and saving cal factors)
     
 end % for expType
 
@@ -150,3 +189,4 @@ clear itimes ivhypo m minimum nahypo nFFT nread nskip ntimes nvhypo;
 clear re reOld rxIndex rxtd sbs sbsLog sbsStore scIndex td tdMod txfd;
 clear txtd v vhypos vMinIndex x y s refTxIndex;
 clear cumulativeUSB  cumulativeLSB sumRe sumIm;
+clear bestSBS l pos txIndex;

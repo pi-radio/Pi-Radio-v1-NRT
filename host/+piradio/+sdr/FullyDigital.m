@@ -234,6 +234,17 @@ classdef FullyDigital < matlab.System
             end % rxIndex
         end % function applyCalRxArray
         
+        function blob = applyCalTxArray(obj, txtd)
+            blob = zeros(size(txtd));
+            for txIndex=1:obj.nch                
+                    td = txtd(:, txIndex);
+                    td = obj.fracDelay(td, obj.calTxDelay(txIndex), size(td, 1));
+                    td = td * exp(1j * obj.calTxPhase(txIndex));
+                    td = td * obj.calMagTx(txIndex);
+                    blob(:, txIndex) = td;                
+            end % txIndex
+        end % function applyCalTxArray
+        
         function blob = applyCalRxIQ(obj, rxtd)
             blob = zeros(size(rxtd));
             for rxIndex=1:obj.nch

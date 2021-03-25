@@ -5,12 +5,12 @@
 nFFT = 1024;    % num of FFT points
 nread = nFFT;   % Number of samples to read
 nskip = nFFT*1;  % Number of samples to skip
-ntimes = 30;    % Number of batches to receive
+ntimes = 100;    % Number of batches to receive
 
 % Generate the TX waveform
-scMin = -450;
+scMin = 1;
 scMax = 450;
-niter =  5;
+niter =  1;
 constellation = [1+1j 1-1j -1+1j -1-1j];
 
 % expType = 1: Make initial measurements of the fractional timing offset
@@ -25,13 +25,13 @@ constellation = [1+1j 1-1j -1+1j -1-1j];
 nto = 31;
 figure(3); clf;
 
-pdpStore = zeros(sdrRx.nadc, 3, niter, nFFT);
+pdpStore = zeros(sdrRx.nadc, 3, niter, ntimes, nFFT);
 sdrRx.calDelayADC = zeros(1, sdrRx.nadc);
 
-for expType = 1:3
+for expType = 1:1
     
     maxPos = zeros(sdrRx.nadc, niter);
-    maxVal = zeros(sdrRx.nadc, niter);
+    maxVal = zeros(sdrRx.nadc, niter, ntimes);
     intPos = zeros(sdrRx.nadc, niter);
         
     for iter = 1:niter
@@ -42,26 +42,31 @@ for expType = 1:3
             if scIndex ~= 0
                 %txfd(nFFT/2 + 1 + scIndex, 1) = sdrTx.refConstellation(nFFT/2 + 1 + scIndex, 1);
                 txfd(nFFT/2 + 1 + scIndex) = constellation(randi(4));
+                txfd(nFFT/2 + 1 - scIndex) = real(txfd(nFFT/2 + 1 + scIndex)) - 1j*imag(txfd(nFFT/2 + 1 + scIndex));
             end
         end % scIndex
+        
         txfd = fftshift(txfd);
         txtd = ifft(txfd);
-        txtd = real(txtd);
-        txfd = fft(txtd);
+%         re = real(txtd)*1;
+%         im = imag(txtd)*0.01;
+%         txtd = re + 1j*im;
+%         %txtd = real(txtd);
+%         txfd = fft(txtd);
         
         m = max(abs(txtd));
        
         % Scale and send the signal from sdrTx
         txtd = txtd/m*15000;
         txtdMod = zeros(nFFT, sdrTx.nch);
-        txtdMod(:,1) = txtd;
+        txtdMod(:,2) = txtd;
         sdrTx.send(txtdMod);
         
         % Receive the signal from sdrRx
-        rxtd = sdrRx.recvADC(nread,nskip,ntimes);
+        rxtd = sdrRx.recv(nread,nskip,ntimes);
         size(rxtd);
                 
-        for iadc=1:sdrRx.nadc
+        for iadc=1:sdrRx.nch
             tos = linspace(-0.5, 0.5, nto);
             for ito = 1:nto
                 to = tos(ito);
@@ -72,20 +77,24 @@ for expType = 1:3
                     elseif ((expType == 2) || (expType == 3))
                         rxtdShifted = fracDelay(rxtd(:,itimes,iadc), to + sdrRx.calDelayADC(iadc), nFFT);
                     end
+                    re = real(rxtdShifted) / 1.2423;
+                    im = imag(rxtdShifted);
+                    rxtdShifted = re + 1j*im;
+                    
                     rxfd = fft(rxtdShifted);
                     corrfd = rxfd .* conj(txfd);
                     corrtd = ifft(corrfd);
                     
                     [~, pos] = max(abs(corrtd));
                     val = corrtd(pos);
-                    if abs(val) > abs(maxVal(iadc, iter))
+                    if abs(val) > abs(maxVal(iadc, iter, itimes))
                         % We have bound a "better" timing offset
-                        maxVal(iadc, iter) = abs(val);
+                        maxVal(iadc, iter, itimes) = abs(val);
                         maxPos(iadc, iter) = tos(ito);
                         intPos(iadc, iter) = pos;
                         
                         % Measure the phase at the "best" to
-                        pdpStore(iadc, expType, iter, :) = corrtd;
+                        pdpStore(iadc, expType, iter, itimes, :) = corrtd;
                         
                     end % if abs(val) > ...
                 end % itimes
