@@ -14,34 +14,78 @@ sdr0 = piradio.sdr.FullyDigital('ip', "10.1.1.50", 'isDebug', isDebug, ...
 
 sdr1 = piradio.sdr.FullyDigital('ip', "10.1.1.51", 'isDebug', isDebug, ...
     'figNum', 101, 'name', 'revB-0001');
-
-% Read some parameters of the SDR in local variables
-nadc = sdr0.nadc;   % num of A/D converters
-ndac = sdr0.ndac;   % num of D/A converters
-nch = sdr0.nch;     % num of channels
-fs = sdr0.fs;       % sample frequency in Hz
-                    % (pre-interpolation at the TX)
-                    % (post-decimation at the RX)
-
-sdr0.fpga.configure('../../config/rfsoc.cfg');
+                   
+% Considure MTS on the DACs and ADCs
 sdr1.fpga.configure('../../config/rfsoc.cfg');
+sdr0.fpga.configure('../../config/rfsoc.cfg');
 
 % Make sure we aren't transmitting anything
 txtd = zeros(1024, 4);
 sdr0.send(txtd);
 sdr1.send(txtd);
+clear txtd;
 
 sdr0.rffeTx.powerDown();
 sdr0.rffeRx.powerDown();
-sdr0.lo.configureUnique('58ghz');
+sdr0.lo.configure('../../config/lmx_registers_58ghz.txt');
 sdr0.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr0.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
 sdr1.rffeTx.powerDown();
 sdr1.rffeRx.powerDown();
-sdr1.lo.configureUnique('58ghz');
+sdr1.lo.configure('../../config/lmx_registers_58ghz.txt');
 sdr1.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr1.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
+
+%% ADC Timing
+sdrTx = sdr1;
+sdrRx = sdr0;
+calDelayADC;
+sdr0 = sdrRx;
+sdr1 = sdrTx;
+clear sdrRx sdrTx;
+
+
+%% Calibrate the RX-side IQ Imbalances
+
+% Calibrate the RX array on sdr1, using sdr0 as the reference TX
+clc;
+sdrTx = sdr0;
+sdrRx = sdr1;
+calIQrx;
+sdr1 = sdrRx;
+sdr0 = sdrTx;
+clear sdrTx sdrRx;
+
+% Calibrate the RX array on sdr0, using sdr1 as the reference TX
+clc;
+sdrTx = sdr1;
+sdrRx = sdr0;
+calIQrx;
+sdr0 = sdrRx;
+sdr1 = sdrTx;
+clear sdrTx sdrRx;
+
+%% Calibrate the TX-side IQ Imbalances
+
+% Calibrate the TX array on sdr0, using sdr1 as the reference RX
+clc;
+sdrTx = sdr0;
+sdrRx = sdr1;
+calIQtx;
+sdr1 = sdrRx;
+sdr0 = sdrTx;
+clear sdrTx sdrRx;
+
+% Calibrate the TX array on sdr1, using sdr0 as the reference RX
+clc;
+sdrTx = sdr1;
+sdrRx = sdr0;
+calIQtx;
+sdr0 = sdrRx;
+sdr1 = sdrTx;
+clear sdrTx sdrRx;
+
 
 %% Calibrate the timing and phase offsets on the TX side
 
@@ -66,7 +110,6 @@ clear sdrTx sdrRx;
 %% Calibrate the timing and phase offsets on the RX side
 
 % Calibrate the RX array on sdr0, using sdr1 as the reference TX
-clc;
 sdrTx = sdr1;
 sdrRx = sdr0;
 calTimingPhaseRx;
@@ -75,7 +118,6 @@ sdr1 = sdrTx;
 clear sdrTx sdrRx;
 
 % Calibrate the RX array on sdr1, using sdr0 as the reference TX
-clc;
 sdrTx = sdr0;
 sdrRx = sdr1;
 calTimingPhaseRx;
@@ -83,36 +125,26 @@ sdr1 = sdrRx;
 sdr0 = sdrTx;
 clear sdrTx sdrRx;
 
-%% Calibrate the RX-side IQ Imbalances
+%% Calibrate the conversion gain imbalances (bidirectional).
 
-% Calibrate the RX array on sdr0, using sdr1 as the reference TX
-clc;
-sdrTx = sdr1;
-sdrRx = sdr0;
-calIQrx;
-sdr0 = sdrRx;
-sdr1 = sdrTx;
-clear sdrTx sdrRx;
+% Note that this works best with a chamber. Otherwise, we will have fading
+% that can mess up the power values.
 
-% % Calibrate the RX array on sdr1, using sdr0 as the reference TX
-% clc;
-% sdrTx = sdr0;
-% sdrRx = sdr1;
-% calIQrx;
-% sdr1 = sdrRx;
-% sdr0 = sdrTx;
-% clear sdrTx sdrRx;
-
-%% Calibrate the TX-side IQ Imbalances
-
-% Calibrate the TX array on sdr0, using sdr1 as the reference RX
-clc;
+% TX-side on sdr0 and RX side on sdr1
 sdrTx = sdr0;
 sdrRx = sdr1;
-calIQtx;
+calConversionGain;
 sdr1 = sdrRx;
 sdr0 = sdrTx;
-clear sdrTx sdrRx;
+clear sdrRx sdrTx;
+
+% TX-side on sdr1 and RX side on sdr0
+sdrTx = sdr1;
+sdrRx = sdr0;
+calConversionGain;
+sdr0 = sdrRx;
+sdr1 = sdrTx;
+clear sdrRx sdrTx;
 
 %% Clear workspace variables
-clear isDebug nadc ndac nch sdr0 sdr1 fs;
+clear isDebug nadc ndac nch sdr0 sdr1 fs pdpStore;

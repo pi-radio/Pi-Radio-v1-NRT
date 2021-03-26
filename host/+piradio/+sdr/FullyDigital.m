@@ -34,6 +34,11 @@ classdef FullyDigital < matlab.System
         calRxIQv;
         calTxIQa;
         calTxIQv;
+        calMagTx;
+        calMagRx;
+        
+        calDelayADC;
+        calDelayDAC;
         
         refConstellation;   % Used only for debug
     end
@@ -60,7 +65,7 @@ classdef FullyDigital < matlab.System
             % Create the RFSoC object
             obj.fpga = piradio.fpga.RFSoC('ip', obj.ip, 'isDebug', obj.isDebug);
             
-            obj.lo = piradio.rffe.LMX2595('socket', obj.socket);
+            obj.lo = piradio.rffe.LMX2595('socket', obj.socket, 'name', obj.name);
             obj.rffeTx = piradio.rffe.HMC6300('socket', obj.socket);
             obj.rffeRx = piradio.rffe.HMC6301('socket', obj.socket);
             
@@ -71,10 +76,14 @@ classdef FullyDigital < matlab.System
             obj.calRxDelay = zeros(1, obj.nch);
             obj.calTxPhase = zeros(1, obj.nch);
             obj.calRxPhase = zeros(1, obj.nch);
-            obj.calRxIQa   = zeros(1, obj.nch);
+            obj.calRxIQa   = ones(1, obj.nch);
             obj.calRxIQv   = zeros(1, obj.nch);
-            obj.calTxIQa   = zeros(1, obj.nch);
+            obj.calTxIQa   = ones(1, obj.nch);
             obj.calTxIQv   = zeros(1, obj.nch);
+            obj.calMagTx   = ones(1, obj.nch);
+            obj.calMagRx   = ones(1, obj.nch);
+            obj.calDelayADC = zeros(1, obj.nadc);
+            obj.calDelayDAC = zeros(1, obj.ndac);
             
             % This is used only for debug
             N = 2048;
@@ -109,7 +118,7 @@ classdef FullyDigital < matlab.System
             % Process the data (i.e., calibration, flow control)
             data = reshape(data, nread, nbatch, obj.nch);
             
-            % Demove DC Offsets
+            % Remove DC Offsets
             for ich = 1:obj.nch
                 for ibatch = 1:nbatch
                     data(:,ibatch,ich) = data(:,ibatch,ich) - mean(data(:,ibatch,ich));
@@ -134,6 +143,55 @@ classdef FullyDigital < matlab.System
             end
         end
         
+        function blob = recvADC(obj, nread, nskip, nbatch)
+            data = obj.recv(nread, nskip, nbatch);
+            nFFT = size(data,1);
+            blob = zeros(nFFT, nbatch, obj.nadc);
+            
+            for itimes=1:nbatch
+                blob(:, itimes, 1) = +1 * real(data(:, itimes, 1));
+                blob(:, itimes, 2) = -1 * imag(data(:, itimes, 1));
+                blob(:, itimes, 3) = +1 * real(data(:, itimes, 2));
+                blob(:, itimes, 4) = +1 * imag(data(:, itimes, 2));
+                blob(:, itimes, 5) = +1 * real(data(:, itimes, 4));
+                blob(:, itimes, 6) = +1 * real(data(:, itimes, 3));
+                blob(:, itimes, 7) = -1 * imag(data(:, itimes, 4));
+                blob(:, itimes, 8) = -1 * imag(data(:, itimes, 3));
+            end            
+        end % recvADC
+        
+        function td = applyCalDelayADC(obj, rxtd)
+            nFFT = size(rxtd,1);
+            nbatch = size(rxtd, 2);
+            blob = zeros(nFFT, nbatch, obj.nadc);
+            
+            % break up from nch-domain to nadc domain
+            for itimes=1:nbatch
+                blob(:, itimes, 1) = +1 * real(rxtd(:, itimes, 1));
+                blob(:, itimes, 2) = -1 * imag(rxtd(:, itimes, 1));
+                blob(:, itimes, 3) = +1 * real(rxtd(:, itimes, 2));
+                blob(:, itimes, 4) = +1 * imag(rxtd(:, itimes, 2));
+                blob(:, itimes, 5) = +1 * real(rxtd(:, itimes, 4));
+                blob(:, itimes, 6) = +1 * real(rxtd(:, itimes, 3));
+                blob(:, itimes, 7) = -1 * imag(rxtd(:, itimes, 4));
+                blob(:, itimes, 8) = -1 * imag(rxtd(:, itimes, 3));
+            end
+            
+            % Apply the per-ADC timing offsets
+            for iadc = 1:obj.nadc
+                for itimes = 1:nbatch
+                    blob(:, itimes, iadc) = obj.fracDelay(blob(:, itimes, iadc), obj.calDelayADC(iadc), nFFT);
+                end
+            end
+            
+            % Reconstitute from nadc-domain to nch-domain
+            td = zeros(nFFT, nbatch, obj.nch);
+            td(:,:,1) = blob(:,:,1) - 1j*blob(:,:,2);
+            td(:,:,2) = blob(:,:,3) + 1j*blob(:,:,4);
+            td(:,:,3) = blob(:,:,6) - 1j*blob(:,:,8);
+            td(:,:,4) = blob(:,:,5) - 1j*blob(:,:,7);
+        end
+        
         function send(obj, data)
             obj.fpga.send(data);
             
@@ -154,20 +212,70 @@ classdef FullyDigital < matlab.System
             end
         end
         
+        function sendDAC(obj, dactd)
+            txtd = zeros(size(dactd,1), obj.nch);
+            txtd(:,1) = +1 * dactd(:,2) + 1j*dactd(:,1);
+            txtd(:,2) = +1 * dactd(:,3) - 1j*dactd(:,4);
+            txtd(:,3) = -1 * dactd(:,5) - 1j*dactd(:,7);
+            txtd(:,4) = -1 * dactd(:,6) - 1j*dactd(:,8);
+            obj.send(txtd);
+        end % sendDAC
+        
+        function blob = applyCalRxArray(obj, rxtd)
+            blob = zeros(size(rxtd));
+            for rxIndex=1:obj.nch
+                for itimes=1:size(rxtd, 2)
+                    td = rxtd(:, itimes, rxIndex);
+                    td = obj.fracDelay(td, obj.calRxDelay(rxIndex), size(td, 1));
+                    td = td * exp(1j * obj.calRxPhase(rxIndex));
+                    td = td * obj.calMagRx(rxIndex);
+                    blob(:, itimes, rxIndex) = td;
+                end % itimes
+            end % rxIndex
+        end % function applyCalRxArray
+        
+        function blob = applyCalTxArray(obj, txtd)
+            blob = zeros(size(txtd));
+            for txIndex=1:obj.nch                
+                    td = txtd(:, txIndex);
+                    td = obj.fracDelay(td, obj.calTxDelay(txIndex), size(td, 1));
+                    td = td * exp(1j * obj.calTxPhase(txIndex));
+                    td = td * obj.calMagTx(txIndex);
+                    blob(:, txIndex) = td;                
+            end % txIndex
+        end % function applyCalTxArray
+        
         function blob = applyCalRxIQ(obj, rxtd)
             blob = zeros(size(rxtd));
             for rxIndex=1:obj.nch
                 for itimes=1:size(rxtd, 2)
                     td = rxtd(:, itimes, rxIndex);
-                    re = real(td);
-                    im = imag(td);
-                    im = im * obj.calRxIQa(rxIndex);
-                    v = obj.calRxIQv(rxIndex);
-                    im = re*((-1)*tan(v)) + im/(cos(v));
+                    reOld = real(td);
+                    imOld = imag(td);
+                    a = obj.calRxIQa(rxIndex);
+                    v = obj.calRxIQv(rxIndex);                    
+                    re = reOld/a;
+                    im =  (-1)*(tan(v))*reOld/a + imOld/(cos(v));
+                    td = re + 1j*im;
                     blob(:,itimes,rxIndex) = td;
                 end % itimes
             end % rxIndex
         end % function applyCalRxIQ
+        
+        function blob = applyCalTxIQ(obj, txtd)
+            blob = zeros(size(txtd));
+            for txIndex=1:obj.nch
+                td = txtd(:,txIndex);
+                reOld = real(td);
+                imOld = imag(td);
+                a = obj.calTxIQa(txIndex);
+                v = obj.calTxIQv(txIndex);                    
+                re = reOld/a;
+                im =  (-1)*(tan(v))*reOld/a + imOld/(cos(v));
+                td = re + 1j*im;
+                blob(:,txIndex) = td;                    
+            end % txIndex
+        end % function applyCalTxIQ
         
         % Create some helper functions
         function nch = get.nch(obj)
@@ -189,7 +297,21 @@ classdef FullyDigital < matlab.System
             % Return the FPGA sample rate
             fs = obj.fpga.fs;
         end
-    end
+        
+        function opBlob = fracDelay(obj, ipBlob,fracDelayVal,N)
+            taps = zeros(0,0);
+            for index=-100:100
+                delay = index + fracDelayVal;
+                taps = [taps sinc(delay)];
+            end
+            x = [ipBlob; ipBlob];
+            x = x';
+            y = conv(taps, x);
+            opBlob = y(N/2 : N/2 + N - 1);
+            opBlob = opBlob';
+        end % fracDelay
+
+    end % methods
     
     methods (Access = 'protected')
         function connect(obj)

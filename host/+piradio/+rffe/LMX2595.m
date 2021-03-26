@@ -16,6 +16,7 @@
 classdef LMX2595 < matlab.System
     properties
         socket;
+        name;
     end
     
     methods
@@ -55,7 +56,7 @@ classdef LMX2595 < matlab.System
         end % function configure
         
         function configureUnique(obj, freq)
-            file = ['../../config/unique' name '/lmx_registers_' freq '.txt'];
+            file = ['../../config/unique/' obj.name '/lmx_registers_' freq '.txt'];
             filestr = fileread(file);
             filebyline = regexp(filestr, '\n', 'split');
             filebyline( cellfun(@isempty,filebyline) ) = [];

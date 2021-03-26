@@ -4,8 +4,8 @@
 % Configure the RX number of samples, etc
 nFFT = 1024;    % num of FFT points
 nread = nFFT;   % Number of samples to read
-nskip = 768*4;  % Number of samples to skip
-ntimes = 20;    % Number of batches to receive
+nskip = nFFT*101;  % Number of samples to skip
+ntimes = 50;    % Number of batches to receive
 
 % Generate the TX waveform
 scMin = -450;
@@ -28,6 +28,8 @@ constellation = [1+1j 1-1j -1+1j -1-1j];
 % How many unique fractional timing offsets are we going to search through?
 nto = 31;
 figure(3); clf;
+
+pdpStore = zeros(sdrRx.nch, 3, niter, ntimes, nFFT);
 
 for expType = 1:3
     
@@ -76,19 +78,20 @@ for expType = 1:3
                         rxtdShifted = rxtdShifted * exp(j*sdrRx.calRxPhase(rxIndex));
                     end
                     rxfd = fft(rxtdShifted);
-                    corrfd = txfd .* conj(rxfd);
+                    corrfd = rxfd .* conj(txfd);
                     corrtd = ifft(corrfd);
                     
                     [~, pos] = max(abs(corrtd));
                     val = corrtd(pos);
                     if abs(val) > abs(maxVal(rxIndex, iter, itimes))
                         % We have bound a "better" timing offset
-                        maxVal(rxIndex, iter, itimes) = val;
+                        maxVal(rxIndex, iter, itimes) = abs(val);
                         maxPos(rxIndex, iter, itimes) = tos(ito);
                         intPos(rxIndex, iter, itimes) = pos;
                         
                         % Measure the phase at the "best" to
                         pk(rxIndex, iter, itimes) = val;
+                        pdpStore(rxIndex, expType, iter, itimes, :) = corrtd;
                         
                     end % if abs(val) > ...
                 end % itimes
@@ -97,7 +100,7 @@ for expType = 1:3
     end % iter
     
     % Calculate the fractional and integer timing offsets
-    cols = 'yrgb'; % Colors for the plots
+    cols = 'mrgb'; % Colors for the plots
     %maxPos(1,:,:) = maxPos(1,:,:) - maxPos(1,:,:); % For rxIndex=1, everything should be 0
     figure(3);
     for rxIndex=1:sdrRx.nch
@@ -108,7 +111,7 @@ for expType = 1:3
         l = (wrapToPi(l*2*pi))/(2*pi);
         if (expType == 1)
             figure(3);
-            subplot(5,1,1);
+            subplot(6,1,1);
             plot(l, cols(rxIndex));
             title('Pre-Cal: Fractional Timing Offsets');
             xlabel('Iteration (Unsorted)');
@@ -117,10 +120,10 @@ for expType = 1:3
             c = sum(exp(1j*2*pi*l));
             c = angle(c);
             c = c /(2*pi);
-            sdrRx.calRxDelay(rxIndex) = c;
+            sdrRx.calRxDelay(rxIndex) = (1)*c;
         elseif (expType == 2)
             figure(3);
-            subplot(5,1,2);
+            subplot(6,1,2);
             plot(l, cols(rxIndex));
             title('Post-Cal: Fractional Timing Offsets')
             xlabel('Iteration (Unsorted)');
@@ -134,12 +137,20 @@ for expType = 1:3
         l = sort(l);
         if (expType == 2)
             figure(3);
-            subplot(5,1,3);
+            subplot(6,4,8+rxIndex);
             plot(l, cols(rxIndex));
-            title('Post-Cal: Integer Timing Offsets');
+            title('Pre-Cal: Integer Timing Off.');
             hold on;
-            ylim([-2 2]);
-            xlabel('Iteration (sorted). Consider only the middle (median) iteration. Should be 0.');
+            ylim([-10 10]); grid on;
+            medianIndex = length(l) / 2;
+            sdrRx.calRxDelay(rxIndex) = sdrRx.calRxDelay(rxIndex) + l(medianIndex);
+        elseif (expType == 3)
+            figure(3);
+            subplot(6,4,16+rxIndex);
+            plot(l, cols(rxIndex));
+            title('Post-Cal: Integer Timing Off.');
+            hold on;
+            ylim([-10 10]); grid on;
         end
         
         % Phase
@@ -149,15 +160,15 @@ for expType = 1:3
         lRx = reshape(lRx, 1, []);
         
         if (expType == 2)
-            subplot(5,1,4);
+            subplot(6,1,4);
             ph = wrapToPi(angle(lRx) - angle(lRef));
             plot(ph, cols(rxIndex)); hold on;
             ylim([-pi pi]);
             title('Pre-Cal: LO Phase Offsets');
             l = angle(sum(exp(1j*ph)));
-            sdrRx.calRxPhase(rxIndex) = l;
+            sdrRx.calRxPhase(rxIndex) = (-1)*l;
         elseif (expType == 3)
-            subplot(5,1,5);
+            subplot(6,1,6);
             ph = wrapToPi(angle(lRx) - angle(lRef));
             plot(ph, cols(rxIndex)); hold on;
             ylim([-pi pi]);
@@ -167,16 +178,19 @@ for expType = 1:3
     end % rxIndex
 end % expType
 
+
+
 % Stop transmitting and do a dummy read on both nodes
 txtd = zeros(nFFT, sdrTx.nch);
 sdrTx.send(txtd);
 sdrRx.send(txtd);
 sdrTx.recv(nread,nskip,ntimes);
 sdrRx.recv(nread,nskip,ntimes);
+pause(1);
 
 % Clear workspace variables
 clear constellation expType iter maxPos maxVal nFFT niter rxtd scIndex;
 clear scMin scMax txfd txIndex txtd m nread nskip nsamp ntimes;
 clear ans corrfd corrtd diff iiter itimes ito nto pos rxfd rxtdShifted;
-clear to tos val cols diffMatrix resTimingErrors toff vec;
+clear to tos val cols diffMatrix resTimingErrors toff vec medianIndex;
 clear intPeakPos intpos c lRef lTx pk ar intPos l ph lRx rxIndex;
