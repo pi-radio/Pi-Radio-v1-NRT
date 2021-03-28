@@ -5,65 +5,76 @@
 % subcarrier -400, since 58000 - (400*1.92) = 57.232 GHz.
 
 sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdrTx.lo.configure('../../config/lmx_registers_58ghz.txt');
 
 % Configure the RX number of samples, etc
 nFFT = 1024;    % num of FFT points
 nread = nFFT;   % Number of samples to read
 nskip = nFFT*1;  % Number of samples to skip
 ntimes = 100;    % Number of batches to receive
-scIndex = 400;  % Transmit at +scIndex, receive at -scIndex
+scIndex = 400;  % Transmit at -scIndex, receive at +scIndex
 
 % The offset LO will differ based on which subcarrier we are going to use,
 % and what the FFT size is. Below are a few examples that you can play
 % around with.
-if (nFFT == 1024) && (scIndex == 300)
-    sdrTx.lo.configure('../../config/lmx_registers_56.848ghz.txt');
-elseif (nFFT == 1024) && (scIndex == 400)
-    sdrTx.lo.configure('../../config/lmx_registers_56.464ghz.txt');
+if (nFFT == 1024) && (scIndex == 400)
+    sdrTx.lo.configure('../../config/lmx_registers_59.536ghz.txt');
 elseif (nFFT == 512) && (scIndex == 200)
-    sdrTx.lo.configure('../../config/lmx_registers_56.464ghz.txt');
+    sdrTx.lo.configure('../../config/lmx_registers_59.536ghz.txt');
 else
     fprintf('Error. Configuration not supported');
 end
 
 
 % Create a single tone at subcarrier +400 and transmit it from one channel
-% on sdrTx
-refTxIndex = 2;
-txfd = zeros(nFFT, 1);
-txtd = zeros(nFFT, sdrTx.nch);
-txfd(nFFT/2 + 1 + scIndex) = 1+0i;
-txtd(:,refTxIndex) = ifft(fftshift(txfd));
-m = max(abs(txtd(:,refTxIndex)));
-txtd = txtd/m*15000;
-sdrTx.send(txtd);
-pause(0.1);
+% on sdrTx at a time.
+sumRe = zeros(sdrTx.nch, sdrRx.nch);
+sumIm = zeros(sdrTx.nch, sdrRx.nch);
+for txIndex=1:sdrTx.nch
+    txfd = zeros(nFFT, 1);
+    txtd = zeros(nFFT, sdrTx.nch);
+    txfd(nFFT/2 + 1 - scIndex) = 1+0i;
+    txtd(:,txIndex) = ifft(fftshift(txfd));
+    m = max(abs(txtd(:,txIndex)));
+    txtd = txtd/m*20000;
+    sdrTx.send(txtd);
+    pause(0.1);
 
-% Receive on sdrRx
-rxtd = sdrRx.recv(nread,nskip,ntimes);
-%rxtd = sdrRx.applyCalDelayADC(rxtd);
-pause(0.1);
-nvhypo = 101;
-vhypos = linspace(-1,1,nvhypo);
+    % Receive on sdrRx
+    rxtd = sdrRx.recv(nread,nskip,ntimes);
+    pause(0.5);
+    nvhypo = 101;
+    vhypos = linspace(-1,1,nvhypo);
+
+    for rxIndex=1:sdrRx.nch
+        for itimes=1:ntimes
+            td = rxtd(:,itimes,rxIndex);
+            fd = fftshift(fft(td));
+            fdMod = zeros(1, nFFT);
+            fdMod(nFFT/2 + 1 - scIndex) = fd(nFFT/2 + 1 - scIndex);
+            fdMod(nFFT/2 + 1 + scIndex) = fd(nFFT/2 + 1 + scIndex);
+            fdMod = fftshift(fdMod);
+            td = ifft(fdMod);
+            sumRe(txIndex, rxIndex) = sumRe(txIndex, rxIndex) + rms(real(td));
+            sumIm(txIndex, rxIndex) = sumIm(txIndex, rxIndex) + rms(imag(td));
+        end % itimes
+    end %rxIndex
+end % txIndex
+
+% Calculate the Alphas
+for rxIndex = 1:sdrRx.nch
+    a = sum(sumRe(:,rxIndex)) / sum(sumIm(:,rxIndex));
+    sdrRx.calRxIQa(rxIndex) = a;
+end
+
 sbsLog   = zeros(sdrTx.nch, sdrRx.nch, ntimes); % Stores the SBS to compare before and after calibration
-
-% First, estimate Alpha
-for rxIndex=1:sdrRx.nch
-    sumRe = 0;
-    sumIm = 0;
-    for itimes=1:ntimes
-        td = rxtd(:,itimes,rxIndex);
-        sumRe = sumRe + rms(real(td));
-        sumIm = sumIm + rms(imag(td));
-    end % itimes
-    sdrRx.calRxIQa(rxIndex) = sumRe / sumIm;
-end %rxIndex
 
 % expType = 1: Plot the SBS, without any corrections (red)
 % expType = 2: Apply alpha. Plot the SBS. Search for best "v" (blue)
 % expType = 3: Apply alpha and v. Plot the SBS.
 
 figure(3); clf;
+refTxIndex = zeros(1, sdrRx.nch);
 for expType = 1:3
     cumulativeSBS = zeros(sdrTx.nch, sdrRx.nch, nvhypo);
     
@@ -71,10 +82,10 @@ for expType = 1:3
         
         txfd = zeros(nFFT, 1);
         txtd = zeros(nFFT, sdrTx.nch);
-        txfd(nFFT/2 + 1 + scIndex) = 1+0i;
+        txfd(nFFT/2 + 1 - scIndex) = 1+0i;
         txtd(:,txIndex) = ifft(fftshift(txfd));
         m = max(abs(txtd(:,txIndex)));
-        txtd = txtd/m*15000;
+        txtd = txtd/m*10000;
         sdrTx.send(txtd);
         pause(0.05);
         rxtd = sdrRx.recv(nread,nskip,ntimes);
@@ -100,7 +111,7 @@ for expType = 1:3
                     end
                     
                     if (expType == 3)
-                        v = v + sdrRx.calRxIQv(rxIndex);
+                        v = sdrRx.calRxIQv(rxIndex);
                     end
 
                     re = (1/a)*reOld;
@@ -110,7 +121,7 @@ for expType = 1:3
                     % "sbs" stands for sideband suppression. This is the
                     % undesired sideband power divided by that of the desired
                     % sideband
-                    sbs = fd(nFFT/2 + 1 + scIndex) / fd(nFFT/2 + 1 - scIndex);
+                    sbs = fd(nFFT/2 + 1 - scIndex) / fd(nFFT/2 + 1 + scIndex);
                     sbs = abs(sbs);
                     cumulativeSBS(txIndex, rxIndex, ivhypo)  = cumulativeSBS(txIndex, rxIndex, ivhypo) + sbs;
                     if (ivhypo == int16(nvhypo/2))
@@ -120,47 +131,41 @@ for expType = 1:3
                 end % ivhypo            
             end % itimes
         end % rxIndex
-    end %sdrTx
+    end % txIndex
     
     figure(3);
     cols = 'rbg';
     for rxIndex = 1:sdrRx.nch
-        bestSBS = 0;
-        for txIndex = 1:sdrTx.nch
-            a = sbsLog(txIndex, rxIndex, :);
-            a = reshape(a, 1, []);
-            a = max(a);
-            if (a < bestSBS)
-                bestSBS = a;
-                refTxIndex = txIndex;
+        
+        if (expType == 1)
+            bestSBS = 0;
+            % Find the TX with the worst LSB/USB ratio. This is
+            % refTxIndex(rxIndex)
+            for txIndex = 1:sdrTx.nch
+                a = sbsLog(txIndex, rxIndex, :);
+                a = reshape(a, 1, []);
+                a = max(a);
+                if (a > bestSBS)
+                    bestSBS = a;
+                    refTxIndex(rxIndex) = txIndex;
+                end
             end
         end
 
         % Plot the SBS as a function of itimes
         subplot(2,4,rxIndex);
-        l = sbsLog(refTxIndex, rxIndex, :);
+        l = sbsLog(refTxIndex(rxIndex), rxIndex, :);
         l = reshape(l, 1, []);
         plot(mag2db(l), cols(expType)); hold on;
         title('RX-side IQ: Sideband Supp');
         xlabel('itimes'); ylabel('Suppression (dB)');
-        ylim([-40 0]); grid on;
+        ylim([-40 0]); grid on; grid minor;
     end % rxIndex
           
     if (expType == 2)
-        for rxIndex = 1:sdrRx.nch
-            bestSBS = 0;
-            for txIndex = 1:sdrTx.nch
-                a = sbsLog(txIndex, rxIndex, :);
-                a = reshape(a, 1, []);
-                a = max(a);
-                if (a < bestSBS)
-                    bestSBS = a;
-                    refTxIndex = txIndex;
-                end
-            end
-            
+        for rxIndex = 1:sdrRx.nch            
             subplot(2,4,rxIndex+4);
-            m = cumulativeSBS(refTxIndex, rxIndex,:);
+            m = cumulativeSBS(refTxIndex(rxIndex), rxIndex,:);
             m = reshape(m, 1, []);
             m = m / min(m);
             m = mag2db(m);
@@ -181,8 +186,8 @@ sdrTx.recv(nread,nskip,ntimes);
 sdrRx.recv(nread,nskip,ntimes);
 
 % Clear the workspace variables, and make sure both nodes revert to 58 GHz
-sdrTx.lo.configure('../../config/lmx_registers_58ghz.txt');
-sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdrTx.lo.configure('../../config/lmx_registers_59ghz.txt');
+sdrRx.lo.configure('../../config/lmx_registers_59ghz.txt');
 
 clear a ahypos aMinIndex ans cumulativeSBS expType fd iahypo im imOld;
 clear itimes ivhypo m minimum nahypo nFFT nread nskip ntimes nvhypo;
