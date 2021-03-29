@@ -11,9 +11,9 @@ sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
 % Configure the RX number of samples, etc
 nFFT = 1024;        % num of FFT points
 nread = nFFT;       % Number of samples to read
-nskip = nFFT*301;     % Number of samples to skip
+nskip = nFFT*301;   % Number of samples to skip
 ntimes = 300;       % Number of batches to receive
-scIndex = 400;   % txIndex transmits at SC = txIndex*scMultiple
+scIndex = 400;      % txIndex transmits at SC = txIndex*scMultiple
 
 % Create nch tones (one from each channel)
 txfd = zeros(nFFT, 1);
@@ -36,7 +36,7 @@ sdrTx.calTxIQv = zeros(1, sdrTx.nch);
 % expType = 2: Transmit only the imag. Measure RX power
 for expType = 1:2
     
-    for txIndex=2:2%1:sdrTx.nch
+    for txIndex=1:sdrTx.nch
         txtdMod = zeros(nFFT, sdrTx.nch);
         
         if (expType == 1)
@@ -99,7 +99,7 @@ nvhypo = 31;
 vhypos = linspace(-1, 1, nvhypo);
 sbAccum = zeros(sdrTx.nch, nvhypo);
 
-for txIndex = 2:2%1:sdrTx.nch
+for txIndex = 1:sdrTx.nch
     
     for ivhypo = 1:nvhypo
         vhypo = vhypos(ivhypo);
@@ -121,7 +121,7 @@ for txIndex = 2:2%1:sdrTx.nch
     
     % Plot and calculate the best "v" to use
     figure(3);
-    subplot(3,1,1);
+    subplot(2,1,1);
     l = sbAccum(txIndex, :);
     plot(vhypos, mag2db(l), cols(txIndex));
     hold on; grid on;
@@ -138,7 +138,7 @@ sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
 for expType = 1:2
     sbsStore = zeros(sdrTx.nch, ntimes);
 
-    for txIndex=2:2%1:sdrTx.nch
+    for txIndex=1:sdrTx.nch
         txtdMod = zeros(nFFT, sdrTx.nch);
         txtdMod(:,txIndex) = txtd;
         if (expType == 2)
@@ -157,21 +157,21 @@ for expType = 1:2
         % Plot
         figure(3);
         if (expType == 1)
-            subplot(3,1,2);
+            subplot(2,4,txIndex+4);
             l = abs(sbsStore(txIndex, :));
-            plot(mag2db(l), cols(txIndex));
+            plot(mag2db(l), 'r');
             hold on; grid on;
             title('Before TX-side IQ Cal: Sideband Suppression');
             xlabel('itimes'); ylabel('Suppression (dB)');
-            ylim([-30 0]);
+            ylim([-50 0]);
         elseif (expType == 2)
-            subplot(3,1,3);
+            subplot(2,4,txIndex+4);
             l = abs(sbsStore(txIndex, :));
-            plot(mag2db(l), cols(txIndex));
+            plot(mag2db(l), 'b');
             hold on; grid on;
             title('After TX-side IQ Cal: Sideband Suppression');
             xlabel('itimes'); ylabel('Suppression (dB)');
-            ylim([-30 0]);
+            ylim([-50 0]);
         end
         
     end % txIndex

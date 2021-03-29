@@ -27,13 +27,13 @@ clear txtd;
 
 sdr0.rffeTx.powerDown();
 sdr0.rffeRx.powerDown();
-sdr0.lo.configure('../../config/lmx_registers_60ghz.txt');
+sdr0.lo.configure('../../config/lmx_registers_58ghz.txt');
 sdr0.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr0.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
 sdr1.rffeTx.powerDown();
 sdr1.rffeRx.powerDown();
-sdr1.lo.configure('../../config/lmx_registers_60ghz.txt');
+sdr1.lo.configure('../../config/lmx_registers_58ghz.txt');
 sdr1.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr1.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
