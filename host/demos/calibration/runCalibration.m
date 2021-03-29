@@ -27,23 +27,15 @@ clear txtd;
 
 sdr0.rffeTx.powerDown();
 sdr0.rffeRx.powerDown();
-sdr0.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdr0.lo.configure('../../config/lmx_registers_60ghz.txt');
 sdr0.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr0.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
 
 sdr1.rffeTx.powerDown();
 sdr1.rffeRx.powerDown();
-sdr1.lo.configure('../../config/lmx_registers_58ghz.txt');
+sdr1.lo.configure('../../config/lmx_registers_60ghz.txt');
 sdr1.rffeTx.configure(9, '../../config/hmc6300_registers.txt');
 sdr1.rffeRx.configure(9, '../../config/hmc6301_registers.txt');
-
-%% ADC Timing
-sdrTx = sdr1;
-sdrRx = sdr0;
-calDelayADC;
-sdr0 = sdrRx;
-sdr1 = sdrTx;
-clear sdrRx sdrTx;
 
 
 %% Calibrate the RX-side IQ Imbalances
@@ -68,14 +60,14 @@ clear sdrTx sdrRx;
 
 %% Calibrate the TX-side IQ Imbalances
 
-% Calibrate the TX array on sdr0, using sdr1 as the reference RX
-clc;
-sdrTx = sdr0;
-sdrRx = sdr1;
-calIQtx;
-sdr1 = sdrRx;
-sdr0 = sdrTx;
-clear sdrTx sdrRx;
+% % Calibrate the TX array on sdr0, using sdr1 as the reference RX
+% clc;
+% sdrTx = sdr0;
+% sdrRx = sdr1;
+% calIQtx;
+% sdr1 = sdrRx;
+% sdr0 = sdrTx;
+% clear sdrTx sdrRx;
 
 % Calibrate the TX array on sdr1, using sdr0 as the reference RX
 clc;
@@ -85,7 +77,6 @@ calIQtx;
 sdr0 = sdrRx;
 sdr1 = sdrTx;
 clear sdrTx sdrRx;
-
 
 %% Calibrate the timing and phase offsets on the TX side
 

@@ -17,8 +17,6 @@ scIndex = 400;   % txIndex transmits at SC = txIndex*scMultiple
 
 % Create nch tones (one from each channel)
 txfd = zeros(nFFT, 1);
-txtd = zeros(nFFT, 1); % Carries just a single tone on one channel
-txtdMod = zeros(nFFT, sdrTx.nch);
 
 txfd(nFFT/2 + 1 + scIndex) = 1+0i;
 txtd = ifft(fftshift(txfd));    
@@ -30,18 +28,21 @@ cols = 'mrgb';
 magReAlpha  = zeros(sdrTx.nch, ntimes);     % magnitude of the RX waveforms, when only Re is being transmitted
 magImAlpha  = zeros(sdrTx.nch, ntimes);     % magnitude of the RX waveforms, when only Im is being transmitted
 
+sdrTx.calTxIQa = ones(1, sdrTx.nch);
+sdrTx.calTxIQv = zeros(1, sdrTx.nch);
+
 
 % expType = 1: Transmit only the real. Measure RX power
 % expType = 2: Transmit only the imag. Measure RX power
 for expType = 1:2
     
-    for txIndex=1:sdrTx.nch
+    for txIndex=2:2%1:sdrTx.nch
         txtdMod = zeros(nFFT, sdrTx.nch);
         
         if (expType == 1)
             txtdMod(:,txIndex) = real(txtd);
         elseif (expType == 2)
-            txtdMod(:,txIndex) = j*imag(txtd);
+            txtdMod(:,txIndex) = 1j*imag(txtd);
         end
 
         sdrTx.send(txtdMod);
@@ -70,15 +71,15 @@ for expType = 1:2
                 fdMod = fftshift(fdMod);
                 td = ifft(fdMod);
                 magIm = rms(abs(td));
-                magImAlpha(txIndex, itimes) = magIm;
+                magImAlpha(txIndex, itimes) =  magIm;
             end
             
         end % itimes
         
         % Calculate Alpha
         if (expType == 2)
-            l = magReAlpha(txIndex, :) ./ magImAlpha(txIndex, :);
-            sdrTx.calTxIQa(txIndex) = mean(l);
+            l = sum(magReAlpha(txIndex, :)) / sum(magImAlpha(txIndex, :));
+            sdrTx.calTxIQa(txIndex) = l;
         end
         
     end % txIndex
@@ -91,14 +92,14 @@ end % expType
 % will be received by the receiver at SC +400. Integrate this power over a
 % large number of RX captures.
 
-sdrTx.lo.configure('../../config/lmx_registers_58ghz.txt');
-sdrRx.lo.configure('../../config/lmx_registers_56.464ghz.txt');
+%sdrTx.lo.configure('../../config/lmx_registers_58ghz.txt');
+%sdrRx.lo.configure('../../config/lmx_registers_56.464ghz.txt');
 refRxIndex = 2; % Which RX index to use as the reference receiver?
 nvhypo = 31;
 vhypos = linspace(-1, 1, nvhypo);
 sbAccum = zeros(sdrTx.nch, nvhypo);
 
-for txIndex = 1:sdrTx.nch
+for txIndex = 2:2%1:sdrTx.nch
     
     for ivhypo = 1:nvhypo
         vhypo = vhypos(ivhypo);
@@ -107,13 +108,14 @@ for txIndex = 1:sdrTx.nch
         txtdMod(:,txIndex) = txtd;
         txtdMod = sdrTx.applyCalTxIQ(txtdMod);
         sdrTx.send(txtdMod);
+        pause(0.05);
         
         rxtd = sdrRx.recv(nread,nskip,ntimes);
         rxtd = sdrRx.applyCalRxIQ(rxtd);
         for itimes=1:ntimes
             td = rxtd(:,itimes,refRxIndex);
             fd = fftshift(fft(td));
-            sbAccum(txIndex, ivhypo) = sbAccum(txIndex, ivhypo) + abs(fd(nFFT/2 + 1 + scIndex));
+            sbAccum(txIndex, ivhypo) = sbAccum(txIndex, ivhypo) + abs(fd(nFFT/2 + 1 - scIndex));
         end %itimes
     end % ivhypo
     
@@ -132,10 +134,11 @@ end % txIndex
 sdrTx.lo.configure('../../config/lmx_registers_58ghz.txt');
 sdrRx.lo.configure('../../config/lmx_registers_58ghz.txt');
 
-sbsStore = zeros(sdrTx.nch, ntimes);
 
 for expType = 1:2
-    for txIndex=1:sdrTx.nch
+    sbsStore = zeros(sdrTx.nch, ntimes);
+
+    for txIndex=2:2%1:sdrTx.nch
         txtdMod = zeros(nFFT, sdrTx.nch);
         txtdMod(:,txIndex) = txtd;
         if (expType == 2)
