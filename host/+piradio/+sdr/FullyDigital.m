@@ -26,10 +26,21 @@ classdef FullyDigital < matlab.System
         fc = 60e9;      % carrier frequency of the SDR in Hz
         figNum;         % Figure number to plot waveforms for this SDR
         name;           % Unique name for this transceiver board
+        
+        % Two node Cal Factors
         calTxDelay;
         calRxDelay;
         calTxPhase;
         calRxPhase;
+        
+        % Self Cal Factors
+        calSelfTxDelay;
+        calSelfRxDelay;
+        calSelfTxPhase;
+        calSelfRxPhase;
+        
+        selfFreqResponse;
+        
         calRxIQa;
         calRxIQv;
         calTxIQa;
@@ -39,6 +50,7 @@ classdef FullyDigital < matlab.System
         
         calDelayADC;
         calDelayDAC;
+        
         
         refConstellation;   % Used only for debug
     end
@@ -76,14 +88,24 @@ classdef FullyDigital < matlab.System
             obj.calRxDelay = zeros(1, obj.nch);
             obj.calTxPhase = zeros(1, obj.nch);
             obj.calRxPhase = zeros(1, obj.nch);
+            
+            obj.calSelfTxDelay = zeros(1, obj.nch);
+            obj.calSelfRxDelay = zeros(1, obj.nch);
+            obj.calSelfTxPhase = zeros(1, obj.nch);
+            obj.calSelfRxPhase = zeros(1, obj.nch);
+            
+            obj.selfFreqResponse = zeros(obj.ndac, obj.nadc, 4096);
+            
             obj.calRxIQa   = ones(1, obj.nch);
             obj.calRxIQv   = zeros(1, obj.nch);
             obj.calTxIQa   = ones(1, obj.nch);
             obj.calTxIQv   = zeros(1, obj.nch);
             obj.calMagTx   = ones(1, obj.nch);
             obj.calMagRx   = ones(1, obj.nch);
-            obj.calDelayADC = zeros(1, obj.nadc);
-            obj.calDelayDAC = zeros(1, obj.ndac);
+            
+            obj.calDelayADC   = ones(1, obj.nadc);
+            obj.calDelayDAC   = ones(1, obj.ndac);
+            
             
             % This is used only for debug
             N = 2048;
@@ -111,7 +133,7 @@ classdef FullyDigital < matlab.System
             
             write(obj.socket, sprintf("+ %d %d %d", nread/obj.fpga.npar, ...
                 nskip/obj.fpga.npar, nsamp*2));
-            
+            %disp(nsamp);
             % Read data from the FPGA
             data = obj.fpga.recv(nsamp);
             
@@ -149,17 +171,17 @@ classdef FullyDigital < matlab.System
             blob = zeros(nFFT, nbatch, obj.nadc);
             
             for itimes=1:nbatch
-                blob(:, itimes, 1) = +1 * real(data(:, itimes, 1));
-                blob(:, itimes, 2) = -1 * imag(data(:, itimes, 1));
-                blob(:, itimes, 3) = +1 * real(data(:, itimes, 2));
-                blob(:, itimes, 4) = +1 * imag(data(:, itimes, 2));
-                blob(:, itimes, 5) = +1 * real(data(:, itimes, 4));
-                blob(:, itimes, 6) = +1 * real(data(:, itimes, 3));
-                blob(:, itimes, 7) = -1 * imag(data(:, itimes, 4));
-                blob(:, itimes, 8) = -1 * imag(data(:, itimes, 3));
-            end            
+                blob(:, itimes, 1) = real(data(:, itimes, 1));
+                blob(:, itimes, 2) = imag(data(:, itimes, 1));
+                blob(:, itimes, 3) = real(data(:, itimes, 2));
+                blob(:, itimes, 4) = imag(data(:, itimes, 2));
+                blob(:, itimes, 5) = real(data(:, itimes, 4));
+                blob(:, itimes, 6) = real(data(:, itimes, 3));
+                blob(:, itimes, 7) = imag(data(:, itimes, 4));
+                blob(:, itimes, 8) = imag(data(:, itimes, 3));
+            end
         end % recvADC
-        
+                
         function td = applyCalDelayADC(obj, rxtd)
             nFFT = size(rxtd,1);
             nbatch = size(rxtd, 2);
@@ -193,6 +215,8 @@ classdef FullyDigital < matlab.System
         end
         
         function send(obj, data)
+            write(obj.socket, sprintf("- %d", size(data,1)));
+            
             obj.fpga.send(data);
             
             % Plot the TX waveforms
@@ -214,10 +238,10 @@ classdef FullyDigital < matlab.System
         
         function sendDAC(obj, dactd)
             txtd = zeros(size(dactd,1), obj.nch);
-            txtd(:,1) = +1 * dactd(:,2) + 1j*dactd(:,1);
-            txtd(:,2) = +1 * dactd(:,3) - 1j*dactd(:,4);
-            txtd(:,3) = -1 * dactd(:,5) - 1j*dactd(:,7);
-            txtd(:,4) = -1 * dactd(:,6) - 1j*dactd(:,8);
+            txtd(:,1) = dactd(:,2) + 1j*dactd(:,1);
+            txtd(:,2) = dactd(:,3) + 1j*dactd(:,4);
+            txtd(:,3) = dactd(:,5) + 1j*dactd(:,7);
+            txtd(:,4) = dactd(:,6) + 1j*dactd(:,8);
             obj.send(txtd);
         end % sendDAC
         
@@ -236,12 +260,12 @@ classdef FullyDigital < matlab.System
         
         function blob = applyCalTxArray(obj, txtd)
             blob = zeros(size(txtd));
-            for txIndex=1:obj.nch                
-                    td = txtd(:, txIndex);
-                    td = obj.fracDelay(td, obj.calTxDelay(txIndex), size(td, 1));
-                    td = td * exp(1j * obj.calTxPhase(txIndex));
-                    td = td * obj.calMagTx(txIndex);
-                    blob(:, txIndex) = td;                
+            for txIndex=1:obj.nch
+                td = txtd(:, txIndex);
+                td = obj.fracDelay(td, obj.calTxDelay(txIndex), size(td, 1));
+                td = td * exp(1j * obj.calTxPhase(txIndex));
+                td = td * obj.calMagTx(txIndex);
+                blob(:, txIndex) = td;
             end % txIndex
         end % function applyCalTxArray
         
@@ -253,7 +277,7 @@ classdef FullyDigital < matlab.System
                     reOld = real(td);
                     imOld = imag(td);
                     a = obj.calRxIQa(rxIndex);
-                    v = obj.calRxIQv(rxIndex);                    
+                    v = obj.calRxIQv(rxIndex);
                     re = reOld/a;
                     im =  (-1)*(tan(v))*reOld/a + imOld/(cos(v));
                     td = re + 1j*im;
@@ -269,11 +293,11 @@ classdef FullyDigital < matlab.System
                 reOld = real(td);
                 imOld = imag(td);
                 a = obj.calTxIQa(txIndex);
-                v = obj.calTxIQv(txIndex);                    
+                v = obj.calTxIQv(txIndex);
                 re = reOld/a;
                 im =  (-1)*(tan(v))*reOld/a + imOld/(cos(v));
                 td = re + 1j*im;
-                blob(:,txIndex) = td;                    
+                blob(:,txIndex) = td;
             end % txIndex
         end % function applyCalTxIQ
         
@@ -301,7 +325,7 @@ classdef FullyDigital < matlab.System
         function opBlob = fracDelay(obj, ipBlob,fracDelayVal,N)
             taps = zeros(0,0);
             for index=-100:100
-                delay = index + fracDelayVal;
+                delay = index - fracDelayVal;
                 taps = [taps sinc(delay)];
             end
             x = [ipBlob; ipBlob];
@@ -310,7 +334,7 @@ classdef FullyDigital < matlab.System
             opBlob = y(N/2 : N/2 + N - 1);
             opBlob = opBlob';
         end % fracDelay
-
+        
     end % methods
     
     methods (Access = 'protected')

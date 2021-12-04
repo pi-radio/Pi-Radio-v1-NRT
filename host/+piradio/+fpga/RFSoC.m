@@ -67,7 +67,14 @@ classdef RFSoC < matlab.System
             % Close TCP connections.
             obj.disconnect();
         end
-        
+        function reset0(obj)
+            obj.sendCmd('Reset 0 0');
+            obj.sendCmd('Reset 0 1');
+            obj.sendCmd('Reset 0 2');
+            obj.sendCmd('Reset 0 3');
+            obj.sendCmd('Reset 1 0');
+            obj.sendCmd('Reset 1 1'); 
+        end
         function rxtd = recv(obj, nsamp)
             % Initialize the output buffer. The output buffer should have
             % the following dimensions: (nsamp/nch/2) x nch
